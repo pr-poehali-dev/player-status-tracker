@@ -26,14 +26,16 @@ const SiteUnblockForm: React.FC<SiteUnblockFormProps> = ({ onUnblock, onCancel }
       const success = storage.restoreSiteAccess(password);
       
       if (success) {
-        storage.addLog('system', 'Доступ к сайту восстановлен через пароль администратора');
-        onUnblock();
+        // Small delay to show optimization process
+        setTimeout(() => {
+          onUnblock();
+        }, 1500);
       } else {
         setError('Неверный пароль администратора');
+        setIsLoading(false);
       }
     } catch (err) {
       setError('Произошла ошибка при восстановлении доступа');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -89,7 +91,7 @@ const SiteUnblockForm: React.FC<SiteUnblockFormProps> = ({ onUnblock, onCancel }
                 {isLoading ? (
                   <>
                     <Icon name="Loader2" className="mr-2 h-4 w-4 animate-spin" />
-                    Восстановление...
+                    Оптимизация данных...
                   </>
                 ) : (
                   <>
@@ -113,6 +115,7 @@ const SiteUnblockForm: React.FC<SiteUnblockFormProps> = ({ onUnblock, onCancel }
           <div className="text-xs text-gray-500 space-y-1">
             <p>• Пароль предоставляется только главными администраторами</p>
             <p>• После успешной разблокировки сайт станет доступен всем пользователям</p>
+            <p>• Система автоматически оптимизирует все данные при восстановлении</p>
             <p>• Все попытки восстановления доступа записываются в журнал</p>
           </div>
         </CardContent>

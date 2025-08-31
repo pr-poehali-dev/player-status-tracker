@@ -334,6 +334,9 @@ export const storage = {
     const ADMIN_PASSWORD = 'GameAdmin#SecureAccess$2024!';
     
     if (password === ADMIN_PASSWORD) {
+      // Optimize all data before restoring access
+      storage.optimizeAllData();
+      
       const settings = storage.getSettings();
       const updatedSettings = {
         ...settings,
@@ -343,10 +346,123 @@ export const storage = {
       storage.saveSettings(updatedSettings);
       
       // Add log entry
-      storage.addLog('system', 'Доступ к сайту восстановлен через пароль администратора');
+      storage.addLog('system', 'Доступ к сайту восстановлен через пароль администратора. Данные оптимизированы.');
       
       return true;
     }
     return false;
+  },
+
+  // Optimize all system data
+  optimizeAllData: (): void => {
+    // Clean up old logs (keep last 500 entries)
+    const logs = storage.getLogs();
+    if (logs.length > 500) {
+      const optimizedLogs = logs.slice(-500);
+      localStorage.setItem('gameLogs', JSON.stringify(optimizedLogs));
+    }
+
+    // Clean up old actions (keep last 200 entries)
+    const actions = storage.getActions();
+    if (actions.length > 200) {
+      const optimizedActions = actions.slice(-200);
+      localStorage.setItem('gameActions', JSON.stringify(optimizedActions));
+    }
+
+    // Remove expired session data
+    const users = storage.getUsers();
+    const now = new Date().getTime();
+    const oneWeekAgo = now - (7 * 24 * 60 * 60 * 1000);
+    
+    const optimizedUsers = users.map(user => {
+      // Keep only recent activity logs
+      const recentActivity = user.activityHistory?.filter(activity => {
+        const activityTime = new Date(activity.timestamp).getTime();
+        return activityTime > oneWeekAgo;
+      }) || [];
+
+      return {
+        ...user,
+        activityHistory: recentActivity
+      };
+    });
+    storage.saveUsers(optimizedUsers);
+
+    // Clean up old game statistics (keep last 30 days)
+    const thirtyDaysAgo = now - (30 * 24 * 60 * 60 * 1000);
+    const allStats = storage.getAllStatistics();
+    
+    const optimizedStats = allStats.map(userStats => {
+      const recentGames = userStats.games?.filter(game => {
+        const gameTime = new Date(game.timestamp).getTime();
+        return gameTime > thirtyDaysAgo;
+      }) || [];
+
+      return {
+        ...userStats,
+        games: recentGames,
+        totalGames: recentGames.length,
+        totalPoints: recentGames.reduce((sum, game) => sum + game.points, 0)
+      };
+    });
+    
+    // Save optimized statistics
+    optimizedStats.forEach(stats => {
+      localStorage.setItem(`gameStats_${stats.userId}`, JSON.stringify(stats));
+    });
+
+    // Remove expired unblock codes (older than 30 days)
+    const settings = storage.getSettings();
+    if (settings.unblockCodes && settings.unblockCodes.length > 50) {
+      // Keep only last 50 codes
+      const optimizedCodes = settings.unblockCodes.slice(-50);
+      const optimizedSettings = { ...settings, unblockCodes: optimizedCodes };
+      storage.saveSettings(optimizedSettings);
+    }
+
+    // Compress localStorage if needed
+    storage.compressStorage();
+
+    storage.addLog('system', 'Выполнена оптимизация всех данных системы');
+  },
+
+  // Compress storage by removing redundant data
+  compressStorage: (): void => {
+    try {
+      // Get all localStorage data
+      const allData: { [key: string]: any } = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key) {
+          allData[key] = JSON.parse(localStorage.getItem(key) || '{}');
+        }
+      }
+
+      // Remove empty objects and arrays
+      Object.keys(allData).forEach(key => {
+        const data = allData[key];
+        if (Array.isArray(data) && data.length === 0) {
+          localStorage.removeItem(key);
+        } else if (typeof data === 'object' && Object.keys(data).length === 0) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      // Remove duplicate entries in arrays
+      ['gameLogs', 'gameActions'].forEach(key => {
+        const data = JSON.parse(localStorage.getItem(key) || '[]');
+        if (Array.isArray(data)) {
+          const uniqueData = data.filter((item, index, arr) => 
+            arr.findIndex(other => other.id === item.id) === index
+          );
+          if (uniqueData.length !== data.length) {
+            localStorage.setItem(key, JSON.stringify(uniqueData));
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('Error compressing storage:', error);
+    }
   }
 };
