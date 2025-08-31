@@ -160,7 +160,10 @@ const AdminManagement = () => {
                           <h3 className="font-medium">{user.nickname}</h3>
                           <p className="text-sm text-gray-500">@{user.login}</p>
                           <p className="text-xs text-gray-400 mt-1">
-                            Время онлайн: {formatTime(user.totalOnlineTime || 0)} | Норма: {user.monthlyNorm || 160}ч/мес
+                            🟢 {formatTime(user.totalOnlineTime || 0)} | 🟡 {formatTime(user.totalAfkTime || 0)} | 🔴 {formatTime(user.totalOfflineTime || 0)}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Норма: {user.monthlyNorm || 160}ч/мес
                           </p>
                         </div>
                         <div className="text-right">
@@ -223,7 +226,14 @@ const AdminManagement = () => {
                     <div className="space-y-2 text-sm">
                       <p>Дата регистрации: {new Date(selectedUser.createdAt).toLocaleDateString('ru-RU')}</p>
                       <p>Последняя активность: {new Date(selectedUser.lastActivity).toLocaleString('ru-RU')}</p>
-                      <p>Общее время онлайн: {formatTime(selectedUser.totalOnlineTime || 0)}</p>
+                      <div className="space-y-1">
+                        <p>🟢 Онлайн: {formatTime(selectedUser.totalOnlineTime || 0)}</p>
+                        <p>🟡 AFK: {formatTime(selectedUser.totalAfkTime || 0)}</p>
+                        <p>🔴 Офлайн: {formatTime(selectedUser.totalOfflineTime || 0)}</p>
+                        <p className="text-gray-600 font-medium">
+                          Всего: {formatTime((selectedUser.totalOnlineTime || 0) + (selectedUser.totalAfkTime || 0) + (selectedUser.totalOfflineTime || 0))}
+                        </p>
+                      </div>
                     </div>
                   </div>
 

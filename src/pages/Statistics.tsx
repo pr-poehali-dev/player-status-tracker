@@ -86,19 +86,28 @@ const Statistics = () => {
       const monthName = date.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
       
       let onlineTime = 0;
+      let afkTime = 0;
+      let offlineTime = 0;
+      
       if (userId) {
         const user = users.find(u => u.id === userId);
         onlineTime = user?.monthlyOnlineTime?.[monthKey] || 0;
+        afkTime = user?.monthlyAfkTime?.[monthKey] || 0;
+        offlineTime = user?.monthlyOfflineTime?.[monthKey] || 0;
       } else {
         users.forEach(user => {
           onlineTime += user.monthlyOnlineTime?.[monthKey] || 0;
+          afkTime += user.monthlyAfkTime?.[monthKey] || 0;
+          offlineTime += user.monthlyOfflineTime?.[monthKey] || 0;
         });
       }
       
       months.unshift({
         key: monthKey,
         name: monthName,
-        onlineTime
+        onlineTime,
+        afkTime,
+        offlineTime
       });
     }
     
@@ -235,12 +244,19 @@ const Statistics = () => {
                 <div key={month.key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <span className="text-sm font-medium">{month.name}</span>
                   <div className="text-right">
-                    <span className="text-sm font-bold">
-                      {Math.floor(month.onlineTime / 1000 / 60 / 60)}ч {Math.floor((month.onlineTime / 1000 / 60) % 60)}м
-                    </span>
-                    <p className="text-xs text-gray-500">
-                      {Math.floor(month.onlineTime / 1000 / 60 / 60 / 24)} дней
-                    </p>
+                    <div className="space-y-1">
+                      <div className="flex space-x-4 text-sm">
+                        <span className="text-green-600 font-medium">
+                          🟢 {Math.floor(month.onlineTime / 1000 / 60 / 60)}ч {Math.floor((month.onlineTime / 1000 / 60) % 60)}м
+                        </span>
+                        <span className="text-yellow-600 font-medium">
+                          🟡 {Math.floor(month.afkTime / 1000 / 60 / 60)}ч {Math.floor((month.afkTime / 1000 / 60) % 60)}м
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Общее: {Math.floor((month.onlineTime + month.afkTime + month.offlineTime) / 1000 / 60 / 60)}ч
+                      </p>
+                    </div>
                   </div>
                 </div>
               ))}

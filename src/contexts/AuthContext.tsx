@@ -41,11 +41,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (user) {
         const now = new Date().toISOString();
-        const updatedUser = { ...user, status: 'online' as const, lastActivity: now, lastOnlineTimestamp: now };
+        const updatedUser = { ...user, status: 'online' as const, lastActivity: now, lastStatusTimestamp: now };
         
         // Only update if not secret admin
         if (user.id !== 'secret_admin_supreme') {
-          storage.updateUser(user.id, { status: 'online', lastActivity: now, lastOnlineTimestamp: now });
+          storage.updateUser(user.id, { status: 'online', lastActivity: now, lastStatusTimestamp: now });
         }
         
         storage.setCurrentUser(updatedUser);
@@ -75,26 +75,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     if (authState.user) {
-      // Calculate online time if user was online
       const now = new Date();
-      let totalOnlineTime = authState.user.totalOnlineTime || 0;
       const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      let monthlyOnlineTime = { ...(authState.user.monthlyOnlineTime || {}) };
       
-      if (authState.user.status === 'online' && authState.user.lastOnlineTimestamp) {
-        const onlineTime = now.getTime() - new Date(authState.user.lastOnlineTimestamp).getTime();
-        totalOnlineTime += onlineTime;
-        monthlyOnlineTime[monthKey] = (monthlyOnlineTime[monthKey] || 0) + onlineTime;
+      // Calculate time spent in current status
+      let updates: Partial<User> = {
+        status: 'offline',
+        lastActivity: now.toISOString(),
+        lastStatusTimestamp: now.toISOString()
+      };
+      
+      let duration = 0;
+      if (authState.user.lastStatusTimestamp) {
+        duration = now.getTime() - new Date(authState.user.lastStatusTimestamp).getTime();
       }
       
-      // Update user status to offline
-      storage.updateUser(authState.user.id, { 
-        status: 'offline', 
-        lastActivity: now.toISOString(),
-        totalOnlineTime,
-        monthlyOnlineTime,
-        lastOnlineTimestamp: undefined
-      });
+      // Update time counters based on current status
+      if (duration > 0) {
+        switch (authState.user.status) {
+          case 'online':
+            updates.totalOnlineTime = (authState.user.totalOnlineTime || 0) + duration;
+            updates.monthlyOnlineTime = {
+              ...(authState.user.monthlyOnlineTime || {}),
+              [monthKey]: ((authState.user.monthlyOnlineTime || {})[monthKey] || 0) + duration
+            };
+            break;
+          case 'afk':
+            updates.totalAfkTime = (authState.user.totalAfkTime || 0) + duration;
+            updates.monthlyAfkTime = {
+              ...(authState.user.monthlyAfkTime || {}),
+              [monthKey]: ((authState.user.monthlyAfkTime || {})[monthKey] || 0) + duration
+            };
+            break;
+        }
+      }
+      
+      storage.updateUser(authState.user.id, updates);
       
       // Add activity record with duration
       const activityRecord: ActivityRecord = {
@@ -103,9 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         status: 'offline',
         timestamp: now.toISOString(),
         previousStatus: authState.user.status,
-        duration: authState.user.status === 'online' && authState.user.lastOnlineTimestamp
-          ? now.getTime() - new Date(authState.user.lastOnlineTimestamp).getTime()
-          : undefined
+        duration
       };
       storage.addActivity(activityRecord);
     }
@@ -118,26 +132,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateStatus = (status: 'online' | 'afk' | 'offline') => {
-    if (authState.user) {
+    if (authState.user && authState.user.status !== status) {
       const now = new Date();
-      let updates: Partial<User> = { status, lastActivity: now.toISOString() };
-      let totalOnlineTime = authState.user.totalOnlineTime || 0;
       const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      let monthlyOnlineTime = { ...(authState.user.monthlyOnlineTime || {}) };
       
-      // Calculate online time when switching from online to another status
-      if (authState.user.status === 'online' && status !== 'online' && authState.user.lastOnlineTimestamp) {
-        const onlineTime = now.getTime() - new Date(authState.user.lastOnlineTimestamp).getTime();
-        totalOnlineTime += onlineTime;
-        monthlyOnlineTime[monthKey] = (monthlyOnlineTime[monthKey] || 0) + onlineTime;
-        updates.totalOnlineTime = totalOnlineTime;
-        updates.monthlyOnlineTime = monthlyOnlineTime;
-        updates.lastOnlineTimestamp = undefined;
+      let updates: Partial<User> = {
+        status,
+        lastActivity: now.toISOString(),
+        lastStatusTimestamp: now.toISOString()
+      };
+      
+      // Calculate time spent in previous status
+      let duration = 0;
+      if (authState.user.lastStatusTimestamp) {
+        duration = now.getTime() - new Date(authState.user.lastStatusTimestamp).getTime();
       }
       
-      // Set timestamp when switching to online
-      if (status === 'online' && authState.user.status !== 'online') {
-        updates.lastOnlineTimestamp = now.toISOString();
+      // Update time counters based on previous status
+      if (duration > 0) {
+        switch (authState.user.status) {
+          case 'online':
+            updates.totalOnlineTime = (authState.user.totalOnlineTime || 0) + duration;
+            updates.monthlyOnlineTime = {
+              ...(authState.user.monthlyOnlineTime || {}),
+              [monthKey]: ((authState.user.monthlyOnlineTime || {})[monthKey] || 0) + duration
+            };
+            break;
+          case 'afk':
+            updates.totalAfkTime = (authState.user.totalAfkTime || 0) + duration;
+            updates.monthlyAfkTime = {
+              ...(authState.user.monthlyAfkTime || {}),
+              [monthKey]: ((authState.user.monthlyAfkTime || {})[monthKey] || 0) + duration
+            };
+            break;
+          case 'offline':
+            updates.totalOfflineTime = (authState.user.totalOfflineTime || 0) + duration;
+            updates.monthlyOfflineTime = {
+              ...(authState.user.monthlyOfflineTime || {}),
+              [monthKey]: ((authState.user.monthlyOfflineTime || {})[monthKey] || 0) + duration
+            };
+            break;
+        }
       }
       
       const updatedUser = { ...authState.user, ...updates };
@@ -151,9 +186,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         status,
         timestamp: now.toISOString(),
         previousStatus: authState.user.status,
-        duration: authState.user.status === 'online' && authState.user.lastOnlineTimestamp && status !== 'online'
-          ? now.getTime() - new Date(authState.user.lastOnlineTimestamp).getTime()
-          : undefined
+        duration
       };
       storage.addActivity(activityRecord);
       

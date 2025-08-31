@@ -74,7 +74,14 @@ const CreateUserForm: React.FC<CreateUserFormProps> = ({ onUserCreated }) => {
         description: formData.description || undefined,
         status: 'offline',
         createdAt: new Date().toISOString(),
-        lastActivity: new Date().toISOString()
+        lastActivity: new Date().toISOString(),
+        totalOnlineTime: 0,
+        totalAfkTime: 0,
+        totalOfflineTime: 0,
+        monthlyOnlineTime: {},
+        monthlyAfkTime: {},
+        monthlyOfflineTime: {},
+        lastStatusTimestamp: new Date().toISOString()
       });
 
       // Log the action

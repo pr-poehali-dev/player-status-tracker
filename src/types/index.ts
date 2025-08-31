@@ -8,8 +8,12 @@ export interface User {
   lastActivity: string;
   createdAt: string;
   totalOnlineTime: number; // in milliseconds
-  lastOnlineTimestamp?: string;
+  totalAfkTime: number; // in milliseconds
+  totalOfflineTime: number; // in milliseconds
+  lastStatusTimestamp?: string; // timestamp when current status started
   monthlyOnlineTime?: { [key: string]: number }; // key: "YYYY-MM", value: milliseconds
+  monthlyAfkTime?: { [key: string]: number }; // key: "YYYY-MM", value: milliseconds
+  monthlyOfflineTime?: { [key: string]: number }; // key: "YYYY-MM", value: milliseconds
   monthlyNorm?: number; // monthly norm in hours
 }
 

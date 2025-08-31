@@ -193,9 +193,29 @@ export const storage = {
         updated.totalOnlineTime = 0;
       }
       
+      if (!('totalAfkTime' in user)) {
+        needsUpdate = true;
+        updated.totalAfkTime = 0;
+      }
+      
+      if (!('totalOfflineTime' in user)) {
+        needsUpdate = true;
+        updated.totalOfflineTime = 0;
+      }
+      
       if (!('monthlyOnlineTime' in user)) {
         needsUpdate = true;
         updated.monthlyOnlineTime = {};
+      }
+      
+      if (!('monthlyAfkTime' in user)) {
+        needsUpdate = true;
+        updated.monthlyAfkTime = {};
+      }
+      
+      if (!('monthlyOfflineTime' in user)) {
+        needsUpdate = true;
+        updated.monthlyOfflineTime = {};
       }
       
       if (!('monthlyNorm' in user)) {
