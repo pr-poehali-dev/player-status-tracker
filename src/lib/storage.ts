@@ -327,5 +327,26 @@ export const storage = {
       return storage.unblockUser(userId, 'unblock_code');
     }
     return false;
+  },
+
+  // Restore site access with admin password
+  restoreSiteAccess: (password: string): boolean => {
+    const ADMIN_PASSWORD = 'GameAdmin#SecureAccess$2024!';
+    
+    if (password === ADMIN_PASSWORD) {
+      const settings = storage.getSettings();
+      const updatedSettings = {
+        ...settings,
+        isPrivate: false,
+        isPublic: true
+      };
+      storage.saveSettings(updatedSettings);
+      
+      // Add log entry
+      storage.addLog('system', 'Доступ к сайту восстановлен через пароль администратора');
+      
+      return true;
+    }
+    return false;
   }
 };

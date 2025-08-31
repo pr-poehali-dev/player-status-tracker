@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { storage } from '@/lib/storage';
 import { SystemSettings, SystemAction } from '@/types';
 import Icon from '@/components/ui/icon';
+import SiteUnblockForm from './SiteUnblockForm';
 
 interface SiteStatusGuardProps {
   children: React.ReactNode;
@@ -16,6 +17,7 @@ const SiteStatusGuard: React.FC<SiteStatusGuardProps> = ({ children }) => {
   const [settings, setSettings] = useState<SystemSettings>(storage.getSettings());
   const [isLoading, setIsLoading] = useState(true);
   const [showEmergencyForm, setShowEmergencyForm] = useState(false);
+  const [showSiteUnblock, setShowSiteUnblock] = useState(false);
   const [emergencyCode, setEmergencyCode] = useState('');
   const [codeError, setCodeError] = useState('');
 
@@ -85,6 +87,22 @@ const SiteStatusGuard: React.FC<SiteStatusGuardProps> = ({ children }) => {
     }
   };
 
+  const handleSiteUnblock = () => {
+    // Refresh settings after unblock
+    const currentSettings = storage.getSettings();
+    setSettings(currentSettings);
+    setShowSiteUnblock(false);
+  };
+
+  if (showSiteUnblock) {
+    return (
+      <SiteUnblockForm
+        onUnblock={handleSiteUnblock}
+        onCancel={() => setShowSiteUnblock(false)}
+      />
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -138,17 +156,28 @@ const SiteStatusGuard: React.FC<SiteStatusGuardProps> = ({ children }) => {
                 Проверить доступность
               </Button>
 
-              {!showEmergencyForm ? (
+              <div className="space-y-2">
                 <Button 
-                  onClick={() => setShowEmergencyForm(true)}
-                  variant="ghost"
+                  onClick={() => setShowSiteUnblock(true)}
+                  variant="outline"
                   size="sm"
-                  className="w-full text-xs text-gray-500 hover:text-gray-700"
+                  className="w-full text-orange-600 border-orange-300 hover:bg-orange-50"
                 >
-                  <Icon name="Key" className="mr-1 h-3 w-3" />
-                  Экстренный доступ
+                  <Icon name="Shield" className="mr-2 h-4 w-4" />
+                  Разблокировать сайт
                 </Button>
-              ) : (
+                
+                {!showEmergencyForm ? (
+                  <Button 
+                    onClick={() => setShowEmergencyForm(true)}
+                    variant="ghost"
+                    size="sm"
+                    className="w-full text-xs text-gray-500 hover:text-gray-700"
+                  >
+                    <Icon name="Key" className="mr-1 h-3 w-3" />
+                    Экстренный доступ
+                  </Button>
+                ) : (
                 <div className="space-y-3 p-3 bg-gray-50 rounded-lg border">
                   <form onSubmit={handleEmergencyAccess} className="space-y-3">
                     <div>
@@ -185,7 +214,8 @@ const SiteStatusGuard: React.FC<SiteStatusGuardProps> = ({ children }) => {
                     </div>
                   </form>
                 </div>
-              )}
+                )}
+              </div>
             </div>
 
             <div className="text-xs text-gray-500 text-center">
