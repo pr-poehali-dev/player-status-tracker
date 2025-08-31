@@ -16,8 +16,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const menuItems = [
     { path: '/dashboard', label: 'Дашборд', icon: 'BarChart3' },
-    { path: '/players', label: 'Игроки', icon: 'Users' },
-    { path: '/statistics', label: 'Статистика', icon: 'TrendingUp' },
+    { path: '/my-statistics', label: 'Моя статистика', icon: 'User' },
+    ...(user && user.adminLevel >= 3 ? [
+      { path: '/players', label: 'Игроки', icon: 'Users' },
+      { path: '/statistics', label: 'Статистика', icon: 'TrendingUp' },
+    ] : []),
     ...(user && user.adminLevel >= 9 ? [
       { path: '/admin-management', label: 'Управление правами', icon: 'Shield' },
       { path: '/system-logs', label: 'Журнал действий', icon: 'FileText' },

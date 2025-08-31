@@ -12,6 +12,7 @@ import Dashboard from "@/pages/Dashboard";
 import Players from "@/pages/Players";
 import PlayerStatistics from "@/pages/PlayerStatistics";
 import Statistics from "@/pages/Statistics";
+import MyStatistics from "@/pages/MyStatistics";
 import AdminManagement from "@/pages/AdminManagement";
 import SystemLogs from "@/pages/SystemLogs";
 import Settings from "@/pages/Settings";
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="/players" element={<ProtectedRoute><Players /></ProtectedRoute>} />
               <Route path="/players/:userId" element={<ProtectedRoute><PlayerStatistics /></ProtectedRoute>} />
               <Route path="/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
+              <Route path="/my-statistics" element={<ProtectedRoute><MyStatistics /></ProtectedRoute>} />
               <Route path="/admin-management" element={<ProtectedRoute><AdminManagement /></ProtectedRoute>} />
               <Route path="/system-logs" element={<ProtectedRoute><SystemLogs /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

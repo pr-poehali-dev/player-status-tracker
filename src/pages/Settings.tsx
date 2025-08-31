@@ -178,16 +178,34 @@ const Settings = () => {
             </div>
 
             {!settings.isSiteOpen && (
-              <div className="space-y-2">
-                <Label htmlFor="maintenanceMessage">Сообщение при закрытом доступе</Label>
-                <Textarea
-                  id="maintenanceMessage"
-                  value={settings.maintenanceMessage}
-                  onChange={(e) => setSettings({ ...settings, maintenanceMessage: e.target.value })}
-                  disabled={!canEditSettings}
-                  rows={3}
-                />
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="maintenanceMessage">Сообщение при закрытом доступе</Label>
+                  <Textarea
+                    id="maintenanceMessage"
+                    value={settings.maintenanceMessage}
+                    onChange={(e) => setSettings({ ...settings, maintenanceMessage: e.target.value })}
+                    disabled={!canEditSettings}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="emergencyCode">Код экстренного восстановления</Label>
+                  <Input
+                    id="emergencyCode"
+                    type="text"
+                    value={settings.emergencyCode || ''}
+                    onChange={(e) => setSettings({ ...settings, emergencyCode: e.target.value })}
+                    disabled={!canEditSettings}
+                    placeholder="Введите секретный код для восстановления доступа"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Этот код позволит восстановить доступ к сайту при закрытом доступе. 
+                    Оставьте пустым, чтобы отключить функцию экстренного восстановления.
+                  </p>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

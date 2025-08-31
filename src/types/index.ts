@@ -57,6 +57,7 @@ export interface SystemSettings {
   isRegistrationOpen: boolean;
   isSiteOpen: boolean;
   maintenanceMessage?: string;
+  emergencyCode?: string; // Secret code to unlock site
   sessionTimeout: number; // in minutes
   afkTimeout: number; // in minutes
 }

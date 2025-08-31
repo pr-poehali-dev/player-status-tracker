@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { storage } from '@/lib/storage';
-import { SystemSettings } from '@/types';
+import { SystemSettings, SystemAction } from '@/types';
 import Icon from '@/components/ui/icon';
 
 interface SiteStatusGuardProps {
@@ -13,6 +15,9 @@ interface SiteStatusGuardProps {
 const SiteStatusGuard: React.FC<SiteStatusGuardProps> = ({ children }) => {
   const [settings, setSettings] = useState<SystemSettings>(storage.getSettings());
   const [isLoading, setIsLoading] = useState(true);
+  const [showEmergencyForm, setShowEmergencyForm] = useState(false);
+  const [emergencyCode, setEmergencyCode] = useState('');
+  const [codeError, setCodeError] = useState('');
 
   useEffect(() => {
     const checkSettings = () => {
@@ -36,6 +41,48 @@ const SiteStatusGuard: React.FC<SiteStatusGuardProps> = ({ children }) => {
       setSettings(currentSettings);
       setIsLoading(false);
     }, 1000);
+  };
+
+  const handleEmergencyAccess = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCodeError('');
+
+    if (!emergencyCode.trim()) {
+      setCodeError('Введите код доступа');
+      return;
+    }
+
+    if (settings.emergencyCode && emergencyCode === settings.emergencyCode) {
+      // Temporarily enable site access
+      const updatedSettings = { ...settings, isSiteOpen: true };
+      storage.saveSettings(updatedSettings);
+      setSettings(updatedSettings);
+
+      // Log emergency access
+      const action: SystemAction = {
+        id: Date.now().toString(),
+        adminId: 'emergency_access',
+        action: 'Экстренное восстановление доступа к сайту',
+        timestamp: new Date().toISOString(),
+        details: 'Использован секретный код'
+      };
+      storage.addAction(action);
+
+      setShowEmergencyForm(false);
+      setEmergencyCode('');
+    } else {
+      setCodeError('Неверный код доступа');
+      
+      // Log failed attempt
+      const action: SystemAction = {
+        id: Date.now().toString(),
+        adminId: 'emergency_access_failed',
+        action: 'Неудачная попытка экстренного доступа',
+        timestamp: new Date().toISOString(),
+        details: `Неверный код: ${emergencyCode}`
+      };
+      storage.addAction(action);
+    }
   };
 
   if (isLoading) {
@@ -81,16 +128,67 @@ const SiteStatusGuard: React.FC<SiteStatusGuardProps> = ({ children }) => {
               Администратор системы временно ограничил доступ к панели управления.
             </p>
             
-            <Button 
-              onClick={handleRefresh}
-              variant="outline"
-              className="w-full"
-            >
-              <Icon name="RefreshCw" className="mr-2 h-4 w-4" />
-              Проверить доступность
-            </Button>
+            <div className="space-y-3">
+              <Button 
+                onClick={handleRefresh}
+                variant="outline"
+                className="w-full"
+              >
+                <Icon name="RefreshCw" className="mr-2 h-4 w-4" />
+                Проверить доступность
+              </Button>
 
-            <div className="text-xs text-gray-500">
+              {!showEmergencyForm ? (
+                <Button 
+                  onClick={() => setShowEmergencyForm(true)}
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-xs text-gray-500 hover:text-gray-700"
+                >
+                  <Icon name="Key" className="mr-1 h-3 w-3" />
+                  Экстренный доступ
+                </Button>
+              ) : (
+                <div className="space-y-3 p-3 bg-gray-50 rounded-lg border">
+                  <form onSubmit={handleEmergencyAccess} className="space-y-3">
+                    <div>
+                      <Label htmlFor="emergencyCode" className="text-xs">Код восстановления</Label>
+                      <Input
+                        id="emergencyCode"
+                        type="password"
+                        value={emergencyCode}
+                        onChange={(e) => setEmergencyCode(e.target.value)}
+                        placeholder="Введите секретный код"
+                        className="text-sm"
+                      />
+                      {codeError && (
+                        <p className="text-xs text-red-600 mt-1">{codeError}</p>
+                      )}
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button type="submit" size="sm" className="flex-1">
+                        <Icon name="Unlock" className="mr-1 h-3 w-3" />
+                        Восстановить доступ
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => {
+                          setShowEmergencyForm(false);
+                          setEmergencyCode('');
+                          setCodeError('');
+                        }}
+                      >
+                        <Icon name="X" className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </form>
+                </div>
+              )}
+            </div>
+
+            <div className="text-xs text-gray-500 text-center">
               <p>Если у вас есть вопросы, обратитесь к администратору</p>
             </div>
           </div>

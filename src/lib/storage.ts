@@ -94,6 +94,7 @@ export const storage = {
       isRegistrationOpen: false,
       isSiteOpen: true,
       maintenanceMessage: 'Сайт на техническом обслуживании',
+      emergencyCode: undefined,
       sessionTimeout: 30,
       afkTimeout: 5
     };
