@@ -13,6 +13,7 @@ const Statistics = () => {
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>('all');
   const [timeFilter, setTimeFilter] = useState<string>('all');
+  const [selectedMonth, setSelectedMonth] = useState<string>('all');
   const { user: currentUser } = useAuth();
 
   useEffect(() => {
@@ -75,12 +76,36 @@ const Statistics = () => {
     return userActivityCount.slice(0, 5);
   };
 
+  const getAvailableMonths = () => {
+    const months = [];
+    const now = new Date();
+    
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthName = date.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+      
+      months.push({ key: monthKey, name: monthName });
+    }
+    
+    return months;
+  };
+
   const getMonthlyStats = (userId?: string) => {
     const now = new Date();
     const months = [];
     
-    // Get last 6 months
-    for (let i = 0; i < 6; i++) {
+    // Get last 12 months or selected month
+    const monthsToShow = selectedMonth === 'all' ? 6 : 1;
+    const startMonth = selectedMonth === 'all' ? 0 : (() => {
+      const parts = selectedMonth.split('-');
+      const year = parseInt(parts[0]);
+      const month = parseInt(parts[1]) - 1;
+      const diffMonths = (now.getFullYear() - year) * 12 + (now.getMonth() - month);
+      return diffMonths;
+    })();
+    
+    for (let i = startMonth; i < startMonth + monthsToShow; i++) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       const monthName = date.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
@@ -183,6 +208,23 @@ const Statistics = () => {
             </SelectContent>
           </Select>
         </div>
+
+        <div className="flex items-center space-x-2">
+          <label className="text-sm font-medium">Месяц:</label>
+          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Выберите месяц" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Последние 6 месяцев</SelectItem>
+              {getAvailableMonths().map((month) => (
+                <SelectItem key={month.key} value={month.key}>
+                  {month.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* General Statistics */}
@@ -236,7 +278,9 @@ const Statistics = () => {
                 Уровень 9+
               </Badge>
             </CardTitle>
-            <CardDescription>Время онлайн за последние 6 месяцев</CardDescription>
+            <CardDescription>
+              {selectedMonth === 'all' ? 'Время онлайн за последние 6 месяцев' : `Время онлайн за ${getAvailableMonths().find(m => m.key === selectedMonth)?.name || 'выбранный месяц'}`}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">

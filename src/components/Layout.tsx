@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,6 +8,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout, updateStatus } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -39,7 +40,20 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <div className="w-64 bg-white shadow-sm border-r border-gray-200">
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      
+      {/* Sidebar */}
+      <div className={`
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-30
+        w-64 bg-white shadow-sm border-r border-gray-200 transition-transform duration-300 ease-in-out
+      `}>
         <div className="p-6">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -106,7 +120,21 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       </div>
 
       <div className="flex-1 flex flex-col">
-        <main className="flex-1 p-8">
+        {/* Mobile header */}
+        <div className="lg:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 rounded-md hover:bg-gray-100"
+          >
+            <Icon name="Menu" size={24} />
+          </button>
+          <div className="flex items-center space-x-2">
+            <div className={`w-2 h-2 rounded-full ${getStatusColor(user?.status || 'offline')}`} />
+            <span className="text-sm font-medium">{user?.nickname}</span>
+          </div>
+        </div>
+        
+        <main className="flex-1 p-4 lg:p-8">
           {children}
         </main>
       </div>
