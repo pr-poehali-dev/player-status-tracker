@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { storage } from '@/lib/storage';
 import SecurityInfo from '@/components/SecurityInfo';
 import RegisterForm from '@/components/RegisterForm';
+import UnblockUserForm from '@/components/UnblockUserForm';
 import Icon from '@/components/ui/icon';
 
 const LoginForm = () => {
@@ -16,6 +17,7 @@ const LoginForm = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
+  const [showUnblock, setShowUnblock] = useState(false);
   const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,6 +46,10 @@ const LoginForm = () => {
         <RegisterForm onSwitchToLogin={() => setShowRegister(false)} />
       </div>
     );
+  }
+
+  if (showUnblock) {
+    return <UnblockUserForm />;
   }
 
   return (
@@ -97,14 +103,26 @@ const LoginForm = () => {
               <p className="text-sm text-gray-600 mb-3">
                 Нет аккаунта?
               </p>
-              <Button
-                variant="outline"
-                onClick={() => setShowRegister(true)}
-                className="w-full"
-              >
-                <Icon name="UserPlus" className="mr-2 h-4 w-4" />
-                Зарегистрироваться
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowRegister(true)}
+                  className="w-full"
+                >
+                  <Icon name="UserPlus" className="mr-2 h-4 w-4" />
+                  Зарегистрироваться
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowUnblock(true)}
+                  className="w-full text-xs text-gray-500 hover:text-gray-700"
+                >
+                  <Icon name="Unlock" className="mr-1 h-3 w-3" />
+                  Разблокировать аккаунт
+                </Button>
+              </div>
             </div>
           )}
 

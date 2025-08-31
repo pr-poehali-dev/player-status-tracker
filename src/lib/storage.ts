@@ -95,6 +95,7 @@ export const storage = {
       isSiteOpen: true,
       maintenanceMessage: 'Сайт на техническом обслуживании',
       emergencyCode: undefined,
+      unblockCodes: [],
       sessionTimeout: 30,
       afkTimeout: 5
     };
@@ -224,11 +225,107 @@ export const storage = {
         updated.monthlyNorm = 160; // Default 160 hours per month
       }
       
+      // Migrate blocking fields
+      if (!('isBlocked' in user)) {
+        needsUpdate = true;
+        updated.isBlocked = false;
+      }
+      
       return updated;
     });
     
     if (needsUpdate) {
       storage.saveUsers(updatedUsers);
     }
+  },
+
+  // User blocking functions
+  blockUser: (userId: string, reason: string, adminId: string) => {
+    const users = storage.getUsers();
+    const userIndex = users.findIndex(u => u.id === userId);
+    
+    if (userIndex !== -1) {
+      users[userIndex] = {
+        ...users[userIndex],
+        isBlocked: true,
+        blockReason: reason,
+        blockedAt: new Date().toISOString(),
+        blockedBy: adminId,
+        status: 'offline' // Force offline when blocked
+      };
+      storage.saveUsers(users);
+      
+      // Log the action
+      const action = {
+        id: Date.now().toString(),
+        adminId,
+        action: 'Пользователь заблокирован',
+        target: users[userIndex].nickname,
+        timestamp: new Date().toISOString(),
+        details: `Причина: ${reason}`
+      };
+      storage.addAction(action);
+      
+      return true;
+    }
+    return false;
+  },
+
+  unblockUser: (userId: string, adminId: string) => {
+    const users = storage.getUsers();
+    const userIndex = users.findIndex(u => u.id === userId);
+    
+    if (userIndex !== -1 && users[userIndex].isBlocked) {
+      const oldReason = users[userIndex].blockReason;
+      users[userIndex] = {
+        ...users[userIndex],
+        isBlocked: false,
+        blockReason: undefined,
+        blockedAt: undefined,
+        blockedBy: undefined
+      };
+      storage.saveUsers(users);
+      
+      // Log the action
+      const action = {
+        id: Date.now().toString(),
+        adminId,
+        action: 'Пользователь разблокирован',
+        target: users[userIndex].nickname,
+        timestamp: new Date().toISOString(),
+        details: `Была причина: ${oldReason}`
+      };
+      storage.addAction(action);
+      
+      return true;
+    }
+    return false;
+  },
+
+  // Generate unblock codes
+  generateUnblockCodes: (count: number = 5): string[] => {
+    const codes = [];
+    for (let i = 0; i < count; i++) {
+      const code = Math.random().toString(36).substring(2, 10).toUpperCase();
+      codes.push(code);
+    }
+    return codes;
+  },
+
+  // Check if unblock code is valid and use it
+  useUnblockCode: (code: string, userId: string): boolean => {
+    const settings = storage.getSettings();
+    const unblockCodes = settings.unblockCodes || [];
+    
+    if (unblockCodes.includes(code)) {
+      // Remove used code
+      const updatedCodes = unblockCodes.filter(c => c !== code);
+      const updatedSettings = { ...settings, unblockCodes: updatedCodes };
+      storage.saveSettings(updatedSettings);
+      
+      // Unblock user
+      return storage.unblockUser(userId, 'unblock_code');
+    }
+    return false;
   }
 };

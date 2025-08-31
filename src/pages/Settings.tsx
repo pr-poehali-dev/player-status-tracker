@@ -205,6 +205,59 @@ const Settings = () => {
                     Оставьте пустым, чтобы отключить функцию экстренного восстановления.
                   </p>
                 </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Коды разблокировки пользователей</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newCodes = storage.generateUnblockCodes(5);
+                        const currentCodes = settings.unblockCodes || [];
+                        const updatedCodes = [...currentCodes, ...newCodes];
+                        setSettings({ ...settings, unblockCodes: updatedCodes });
+                      }}
+                      disabled={!canEditSettings}
+                    >
+                      <Icon name="Plus" className="mr-1 h-3 w-3" />
+                      Сгенерировать коды
+                    </Button>
+                  </div>
+                  <div className="max-h-32 overflow-y-auto border rounded p-2 bg-gray-50">
+                    {settings.unblockCodes && settings.unblockCodes.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-1">
+                        {settings.unblockCodes.map((code, index) => (
+                          <div key={index} className="flex items-center justify-between p-1 bg-white rounded text-xs">
+                            <code className="font-mono">{code}</code>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const updatedCodes = settings.unblockCodes?.filter((_, i) => i !== index) || [];
+                                setSettings({ ...settings, unblockCodes: updatedCodes });
+                              }}
+                              disabled={!canEditSettings}
+                              className="h-4 w-4 p-0 hover:bg-red-100"
+                            >
+                              <Icon name="X" className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-500 text-center py-2">
+                        Нет активных кодов разблокировки
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Эти одноразовые коды позволяют заблокированным пользователям самостоятельно разблокировать свои аккаунты. 
+                    Каждый код можно использовать только один раз.
+                  </p>
+                </div>
               </>
             )}
           </CardContent>

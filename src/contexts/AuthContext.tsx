@@ -40,6 +40,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const user = await storage.authenticateUser(loginData, password);
       
       if (user) {
+        // Check if user is blocked
+        if (user.isBlocked) {
+          throw new Error(`Аккаунт заблокирован. Причина: ${user.blockReason || 'Не указана'}`);
+        }
+        
         const now = new Date().toISOString();
         const updatedUser = { ...user, status: 'online' as const, lastActivity: now, lastStatusTimestamp: now };
         

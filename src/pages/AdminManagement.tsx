@@ -157,7 +157,15 @@ const AdminManagement = () => {
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <h3 className="font-medium">{user.nickname}</h3>
+                          <div className="flex items-center space-x-2">
+                            <h3 className="font-medium">{user.nickname}</h3>
+                            {user.isBlocked && (
+                              <Badge variant="destructive" className="text-xs">
+                                <Icon name="Ban" className="mr-1 h-3 w-3" />
+                                Заблокирован
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-500">@{user.login}</p>
                           <p className="text-xs text-gray-400 mt-1">
                             🟢 {formatTime(user.totalOnlineTime || 0)} | 🟡 {formatTime(user.totalAfkTime || 0)} | 🔴 {formatTime(user.totalOfflineTime || 0)}
@@ -165,6 +173,11 @@ const AdminManagement = () => {
                           <p className="text-xs text-gray-500">
                             Норма: {user.monthlyNorm || 160}ч/мес
                           </p>
+                          {user.isBlocked && user.blockReason && (
+                            <p className="text-xs text-red-600 mt-1">
+                              Причина: {user.blockReason}
+                            </p>
+                          )}
                         </div>
                         <div className="text-right">
                           <Badge variant={user.adminLevel >= 9 ? "destructive" : user.adminLevel >= 5 ? "default" : "secondary"}>
@@ -237,30 +250,93 @@ const AdminManagement = () => {
                     </div>
                   </div>
 
-                  {currentUser && currentUser.adminLevel >= 9 && selectedUser.id !== currentUser.id && (
-                    <div>
-                      <h4 className="font-medium mb-3">Сброс пароля:</h4>
-                      <form
-                        onSubmit={async (e) => {
-                          e.preventDefault();
-                          const formData = new FormData(e.currentTarget);
-                          const newPassword = formData.get('password') as string;
-                          if (newPassword) {
-                            await handlePasswordReset(selectedUser.id, newPassword);
-                          }
-                        }}
-                        className="space-y-3"
-                      >
-                        <Input
-                          name="password"
-                          type="password"
-                          placeholder="Новый пароль"
-                          required
-                        />
-                        <Button type="submit" variant="outline" size="sm">
-                          Сбросить пароль
-                        </Button>
-                      </form>
+                  {currentUser && currentUser.adminLevel >= 8 && selectedUser.id !== currentUser.id && (
+                    <div className="space-y-6">
+                      {/* User Blocking */}
+                      <div>
+                        <h4 className="font-medium mb-3">Блокировка пользователя:</h4>
+                        {selectedUser.isBlocked ? (
+                          <div className="space-y-3">
+                            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                              <div className="flex items-center space-x-2 mb-2">
+                                <Icon name="Ban" className="h-4 w-4 text-red-600" />
+                                <span className="text-sm font-medium text-red-800">Пользователь заблокирован</span>
+                              </div>
+                              <p className="text-xs text-red-600">Причина: {selectedUser.blockReason}</p>
+                              <p className="text-xs text-red-500">
+                                Заблокирован: {new Date(selectedUser.blockedAt!).toLocaleString('ru-RU')}
+                              </p>
+                            </div>
+                            <Button
+                              onClick={() => {
+                                if (currentUser) {
+                                  storage.unblockUser(selectedUser.id, currentUser.id);
+                                  loadUsers();
+                                  setSelectedUser(prev => prev ? {...prev, isBlocked: false, blockReason: undefined} : null);
+                                }
+                              }}
+                              variant="outline"
+                              size="sm"
+                              className="text-green-600 hover:text-green-700"
+                            >
+                              <Icon name="Unlock" className="mr-2 h-4 w-4" />
+                              Разблокировать
+                            </Button>
+                          </div>
+                        ) : (
+                          <form
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              const formData = new FormData(e.currentTarget);
+                              const reason = formData.get('reason') as string;
+                              if (reason && currentUser) {
+                                storage.blockUser(selectedUser.id, reason, currentUser.id);
+                                loadUsers();
+                                setSelectedUser(prev => prev ? {...prev, isBlocked: true, blockReason: reason} : null);
+                              }
+                            }}
+                            className="space-y-3"
+                          >
+                            <Input
+                              name="reason"
+                              placeholder="Причина блокировки"
+                              required
+                            />
+                            <Button type="submit" variant="destructive" size="sm">
+                              <Icon name="Ban" className="mr-2 h-4 w-4" />
+                              Заблокировать
+                            </Button>
+                          </form>
+                        )}
+                      </div>
+
+                      {/* Password Reset - only for level 9+ */}
+                      {currentUser.adminLevel >= 9 && (
+                        <div>
+                          <h4 className="font-medium mb-3">Сброс пароля:</h4>
+                          <form
+                            onSubmit={async (e) => {
+                              e.preventDefault();
+                              const formData = new FormData(e.currentTarget);
+                              const newPassword = formData.get('password') as string;
+                              if (newPassword) {
+                                await handlePasswordReset(selectedUser.id, newPassword);
+                              }
+                            }}
+                            className="space-y-3"
+                          >
+                            <Input
+                              name="password"
+                              type="password"
+                              placeholder="Новый пароль"
+                              required
+                            />
+                            <Button type="submit" variant="outline" size="sm">
+                              Сбросить пароль
+                            </Button>
+                          </form>
+                        </div>
+                      )}
                     </div>
                   )}
                 </CardContent>

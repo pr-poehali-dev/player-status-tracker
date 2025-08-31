@@ -15,6 +15,10 @@ export interface User {
   monthlyAfkTime?: { [key: string]: number }; // key: "YYYY-MM", value: milliseconds
   monthlyOfflineTime?: { [key: string]: number }; // key: "YYYY-MM", value: milliseconds
   monthlyNorm?: number; // monthly norm in hours
+  isBlocked?: boolean; // user blocked status
+  blockReason?: string; // reason for blocking
+  blockedAt?: string; // when user was blocked
+  blockedBy?: string; // admin who blocked the user
 }
 
 export interface ActivityRecord {
@@ -58,6 +62,7 @@ export interface SystemSettings {
   isSiteOpen: boolean;
   maintenanceMessage?: string;
   emergencyCode?: string; // Secret code to unlock site
+  unblockCodes?: string[]; // Codes to unblock users
   sessionTimeout: number; // in minutes
   afkTimeout: number; // in minutes
 }
