@@ -310,6 +310,37 @@ const Settings = () => {
               </p>
             </div>
 
+            {currentUser && currentUser.adminLevel >= 10 && (
+              <div className="space-y-2 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                <Label htmlFor="minimumMonthlyNorm" className="text-orange-800 font-medium">
+                  Минимальная месячная норма (уровень 10+)
+                </Label>
+                <div className="flex items-center space-x-2">
+                  <Input
+                    id="minimumMonthlyNorm"
+                    type="number"
+                    min="40"
+                    max="300"
+                    value={settings.minimumMonthlyNorm || 160}
+                    onChange={(e) => setSettings({ ...settings, minimumMonthlyNorm: parseInt(e.target.value) || 160 })}
+                    disabled={!canEditSettings}
+                    className="w-24 border-orange-300 focus:border-orange-500"
+                  />
+                  <span className="text-sm text-orange-700">часов</span>
+                </div>
+                <p className="text-xs text-orange-600">
+                  Минимальное количество часов, которое должен отработать каждый пользователь в месяц.
+                  Влияет на цветовую индикацию выполнения нормы.
+                </p>
+                <div className="flex items-center space-x-2">
+                  <Icon name="Shield" className="h-4 w-4 text-orange-600" />
+                  <span className="text-xs text-orange-700 font-medium">
+                    Эта настройка доступна только администраторам 10 уровня
+                  </span>
+                </div>
+              </div>
+            )}
+
             <Alert>
               <Icon name="Info" className="h-4 w-4" />
               <AlertDescription>

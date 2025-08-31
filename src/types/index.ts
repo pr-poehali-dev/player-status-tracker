@@ -65,4 +65,5 @@ export interface SystemSettings {
   unblockCodes?: string[]; // Codes to unblock users
   sessionTimeout: number; // in minutes
   afkTimeout: number; // in minutes
+  minimumMonthlyNorm?: number; // minimum monthly norm in hours for all users
 }

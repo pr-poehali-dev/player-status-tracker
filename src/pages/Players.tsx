@@ -10,6 +10,7 @@ import { storage } from '@/lib/storage';
 import { User, SystemAction, ActivityRecord } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import Icon from '@/components/ui/icon';
+import NormProgress from '@/components/ui/norm-progress';
 
 const Players = () => {
   const [players, setPlayers] = useState<User[]>([]);
@@ -276,8 +277,18 @@ const Players = () => {
                   <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                     <Icon name="User" className="h-5 w-5 text-blue-600" />
                   </div>
-                  <div>
-                    <h3 className="font-medium text-gray-900">{player.nickname}</h3>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-medium text-gray-900">{player.nickname}</h3>
+                      <div className="text-xs text-gray-400">
+                        Норма месяца
+                      </div>
+                    </div>
+                    
+                    <div className="mb-2">
+                      <NormProgress user={player} size="sm" showDetails={false} />
+                    </div>
+                    
                     <div className="flex items-center space-x-3 text-sm text-gray-500">
                       <span>@{player.login}</span>
                       <span>•</span>

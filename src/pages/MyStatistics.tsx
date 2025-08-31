@@ -5,6 +5,7 @@ import { storage } from '@/lib/storage';
 import { ActivityRecord } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import Icon from '@/components/ui/icon';
+import NormProgress from '@/components/ui/norm-progress';
 
 const MyStatistics = () => {
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
@@ -207,34 +208,21 @@ const MyStatistics = () => {
       {/* Current Month Progress */}
       <Card>
         <CardHeader>
-          <CardTitle>Прогресс текущего месяца</CardTitle>
+          <CardTitle>Прогресс выполнения месячной нормы</CardTitle>
           <CardDescription>
-            Отработано {monthlyProgress.current}ч из {monthlyProgress.norm}ч нормы
+            Ваша рабочая активность за текущий месяц
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span>Прогресс выполнения нормы</span>
-                <span>{Math.round(monthlyProgress.progress)}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-3">
-                <div
-                  className={`h-3 rounded-full transition-all ${
-                    monthlyProgress.progress >= 100 
-                      ? 'bg-green-500' 
-                      : monthlyProgress.progress >= 75
-                      ? 'bg-blue-500'
-                      : monthlyProgress.progress >= 50
-                      ? 'bg-yellow-500'
-                      : 'bg-red-500'
-                  }`}
-                  style={{ width: `${Math.min(monthlyProgress.progress, 100)}%` }}
-                ></div>
-              </div>
-            </div>
-            {monthlyProgress.progress >= 100 && (
+            <NormProgress 
+              user={currentUser} 
+              size="lg" 
+              showDetails={true}
+              className="my-4"
+            />
+            
+            {storage.checkMonthlyNorm(currentUser).meetsNorm && (
               <div className="flex items-center text-green-600 text-sm">
                 <Icon name="CheckCircle" className="mr-2 h-4 w-4" />
                 Месячная норма выполнена!

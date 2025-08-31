@@ -151,7 +151,8 @@ export const storage = {
       emergencyCode: undefined,
       unblockCodes: [],
       sessionTimeout: 30,
-      afkTimeout: 5
+      afkTimeout: 5,
+      minimumMonthlyNorm: 160 // Default minimum monthly norm in hours
     };
   },
 
@@ -621,5 +622,38 @@ export const storage = {
     } catch (error) {
       console.error('Error compressing storage:', error);
     }
+  },
+
+  // Check if user meets monthly norm
+  checkMonthlyNorm: (user: User, month?: string): { meetsNorm: boolean; currentHours: number; requiredHours: number; percentage: number } => {
+    const settings = storage.getSettings();
+    const minimumNorm = settings.minimumMonthlyNorm || 160;
+    const targetMonth = month || new Date().toISOString().slice(0, 7); // Format: YYYY-MM
+    
+    // Get user's monthly hours for the specified month
+    const monthlyHours = user.monthlyOnlineTime?.[targetMonth] || 0;
+    const currentHours = Math.round(monthlyHours / (1000 * 60 * 60)); // Convert from milliseconds to hours
+    
+    // Use individual user norm if set, otherwise use system minimum
+    const requiredHours = user.monthlyNorm || minimumNorm;
+    
+    const percentage = (currentHours / requiredHours) * 100;
+    const meetsNorm = currentHours >= requiredHours;
+    
+    return {
+      meetsNorm,
+      currentHours,
+      requiredHours,
+      percentage: Math.min(percentage, 100)
+    };
+  },
+
+  // Get norm status for all users
+  getAllUsersNormStatus: (month?: string) => {
+    const users = storage.getUsers();
+    return users.map(user => ({
+      user,
+      normStatus: storage.checkMonthlyNorm(user, month)
+    }));
   }
 };
