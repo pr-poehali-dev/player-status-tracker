@@ -28,7 +28,8 @@ const SiteUnblockForm: React.FC<SiteUnblockFormProps> = ({ onUnblock, onCancel }
       if (success) {
         // Small delay to show optimization process
         setTimeout(() => {
-          onUnblock();
+          // Force page reload to ensure all components update
+          window.location.reload();
         }, 1500);
       } else {
         setError('Неверный пароль администратора');

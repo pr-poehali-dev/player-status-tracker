@@ -341,7 +341,8 @@ export const storage = {
       const updatedSettings = {
         ...settings,
         isPrivate: false,
-        isPublic: true
+        isPublic: true,
+        isSiteOpen: true
       };
       storage.saveSettings(updatedSettings);
       

@@ -30,10 +30,22 @@ const SiteStatusGuard: React.FC<SiteStatusGuardProps> = ({ children }) => {
 
     checkSettings();
     
-    // Check settings every 30 seconds
-    const interval = setInterval(checkSettings, 30000);
+    // Check settings every 5 seconds for faster response
+    const interval = setInterval(checkSettings, 5000);
     
-    return () => clearInterval(interval);
+    // Listen for storage changes
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'gameSettings') {
+        checkSettings();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   const handleRefresh = () => {
@@ -89,9 +101,13 @@ const SiteStatusGuard: React.FC<SiteStatusGuardProps> = ({ children }) => {
 
   const handleSiteUnblock = () => {
     // Refresh settings after unblock
-    const currentSettings = storage.getSettings();
-    setSettings(currentSettings);
-    setShowSiteUnblock(false);
+    setIsLoading(true);
+    setTimeout(() => {
+      const currentSettings = storage.getSettings();
+      setSettings(currentSettings);
+      setShowSiteUnblock(false);
+      setIsLoading(false);
+    }, 100);
   };
 
   if (showSiteUnblock) {
