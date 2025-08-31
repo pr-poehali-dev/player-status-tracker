@@ -1,10 +1,11 @@
-import { User, ActivityRecord, SystemAction } from '@/types';
+import { User, ActivityRecord, SystemAction, SystemSettings } from '@/types';
 
 const STORAGE_KEYS = {
   USERS: 'game_admin_users',
   ACTIVITY: 'game_admin_activity',
   ACTIONS: 'game_admin_actions',
-  CURRENT_USER: 'game_admin_current_user'
+  CURRENT_USER: 'game_admin_current_user',
+  SETTINGS: 'game_admin_settings'
 };
 
 export const storage = {
@@ -84,6 +85,23 @@ export const storage = {
     }
   },
 
+  // Settings management
+  getSettings: (): SystemSettings => {
+    const data = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+    return data ? JSON.parse(data) : {
+      siteName: 'Панель администратора',
+      isRegistrationOpen: false,
+      isSiteOpen: true,
+      maintenanceMessage: 'Сайт на техническом обслуживании',
+      sessionTimeout: 30,
+      afkTimeout: 5
+    };
+  },
+
+  saveSettings: (settings: SystemSettings) => {
+    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+  },
+
   // Initialize default data
   initialize: () => {
     const users = storage.getUsers();
@@ -97,9 +115,24 @@ export const storage = {
         adminLevel: 10,
         status: 'offline',
         lastActivity: new Date().toISOString(),
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        totalOnlineTime: 0
       };
       storage.addUser(defaultAdmin);
+    }
+    
+    // Migrate users without totalOnlineTime
+    const existingUsers = storage.getUsers();
+    let needsUpdate = false;
+    const updatedUsers = existingUsers.map(user => {
+      if (!('totalOnlineTime' in user)) {
+        needsUpdate = true;
+        return { ...user, totalOnlineTime: 0 };
+      }
+      return user;
+    });
+    if (needsUpdate) {
+      storage.saveUsers(updatedUsers);
     }
   }
 };

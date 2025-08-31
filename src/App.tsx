@@ -10,6 +10,9 @@ import Layout from "@/components/Layout";
 import Dashboard from "@/pages/Dashboard";
 import Players from "@/pages/Players";
 import Statistics from "@/pages/Statistics";
+import AdminManagement from "@/pages/AdminManagement";
+import SystemLogs from "@/pages/SystemLogs";
+import Settings from "@/pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +40,9 @@ const App = () => (
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/players" element={<ProtectedRoute><Players /></ProtectedRoute>} />
             <Route path="/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
+            <Route path="/admin-management" element={<ProtectedRoute><AdminManagement /></ProtectedRoute>} />
+            <Route path="/system-logs" element={<ProtectedRoute><SystemLogs /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

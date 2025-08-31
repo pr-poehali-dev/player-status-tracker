@@ -144,7 +144,7 @@ const Dashboard = () => {
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                     <div>
                       <p className="text-sm font-medium">{user.nickname}</p>
-                      <p className="text-xs text-gray-500">Уровень {user.adminLevel}</p>
+                      <p className="text-xs text-gray-500">Уровень {user.adminLevel} • Онлайн: {Math.floor((user.totalOnlineTime || 0) / 1000 / 60)}м</p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -171,21 +171,21 @@ const Dashboard = () => {
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                   <span className="text-sm">Время онлайн</span>
                 </div>
-                <span className="font-medium">{stats.totalActivity.online} ед.</span>
+                <span className="font-medium">{Math.floor((stats.totalActivity.online || 0) / 1000 / 60)} мин</span>
               </div>
               <div className="flex justify-between items-center">
                 <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
                   <span className="text-sm">Время АФК</span>
                 </div>
-                <span className="font-medium">{stats.totalActivity.afk} ед.</span>
+                <span className="font-medium">{Math.floor((stats.totalActivity.afk || 0) / 1000 / 60)} мин</span>
               </div>
               <div className="flex justify-between items-center">
                 <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
                   <span className="text-sm">Время офлайн</span>
                 </div>
-                <span className="font-medium">{stats.totalActivity.offline} ед.</span>
+                <span className="font-medium">{Math.floor((stats.totalActivity.offline || 0) / 1000 / 60)} мин</span>
               </div>
             </div>
           </CardContent>

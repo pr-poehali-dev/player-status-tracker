@@ -40,8 +40,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const user = users.find(u => u.login === loginData && u.password === password);
     
     if (user) {
-      const updatedUser = { ...user, status: 'online' as const, lastActivity: new Date().toISOString() };
-      storage.updateUser(user.id, { status: 'online', lastActivity: new Date().toISOString() });
+      const now = new Date().toISOString();
+      const updatedUser = { ...user, status: 'online' as const, lastActivity: now, lastOnlineTimestamp: now };
+      storage.updateUser(user.id, { status: 'online', lastActivity: now, lastOnlineTimestamp: now });
       storage.setCurrentUser(updatedUser);
       
       // Add activity record
@@ -49,7 +50,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: Date.now().toString(),
         userId: user.id,
         status: 'online',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        previousStatus: user.status
       };
       storage.addActivity(activityRecord);
       
@@ -64,15 +66,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = () => {
     if (authState.user) {
-      // Update user status to offline
-      storage.updateUser(authState.user.id, { status: 'offline', lastActivity: new Date().toISOString() });
+      // Calculate online time if user was online
+      const now = new Date();
+      let totalOnlineTime = authState.user.totalOnlineTime || 0;
       
-      // Add activity record
+      if (authState.user.status === 'online' && authState.user.lastOnlineTimestamp) {
+        const onlineTime = now.getTime() - new Date(authState.user.lastOnlineTimestamp).getTime();
+        totalOnlineTime += onlineTime;
+      }
+      
+      // Update user status to offline
+      storage.updateUser(authState.user.id, { 
+        status: 'offline', 
+        lastActivity: now.toISOString(),
+        totalOnlineTime,
+        lastOnlineTimestamp: undefined
+      });
+      
+      // Add activity record with duration
       const activityRecord: ActivityRecord = {
         id: Date.now().toString(),
         userId: authState.user.id,
         status: 'offline',
-        timestamp: new Date().toISOString()
+        timestamp: now.toISOString(),
+        previousStatus: authState.user.status,
+        duration: authState.user.status === 'online' && authState.user.lastOnlineTimestamp
+          ? now.getTime() - new Date(authState.user.lastOnlineTimestamp).getTime()
+          : undefined
       };
       storage.addActivity(activityRecord);
     }
@@ -86,16 +106,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateStatus = (status: 'online' | 'afk' | 'offline') => {
     if (authState.user) {
-      const updatedUser = { ...authState.user, status, lastActivity: new Date().toISOString() };
-      storage.updateUser(authState.user.id, { status, lastActivity: new Date().toISOString() });
+      const now = new Date();
+      let updates: Partial<User> = { status, lastActivity: now.toISOString() };
+      let totalOnlineTime = authState.user.totalOnlineTime || 0;
+      
+      // Calculate online time when switching from online to another status
+      if (authState.user.status === 'online' && status !== 'online' && authState.user.lastOnlineTimestamp) {
+        const onlineTime = now.getTime() - new Date(authState.user.lastOnlineTimestamp).getTime();
+        totalOnlineTime += onlineTime;
+        updates.totalOnlineTime = totalOnlineTime;
+        updates.lastOnlineTimestamp = undefined;
+      }
+      
+      // Set timestamp when switching to online
+      if (status === 'online' && authState.user.status !== 'online') {
+        updates.lastOnlineTimestamp = now.toISOString();
+      }
+      
+      const updatedUser = { ...authState.user, ...updates };
+      storage.updateUser(authState.user.id, updates);
       storage.setCurrentUser(updatedUser);
       
-      // Add activity record
+      // Add activity record with duration
       const activityRecord: ActivityRecord = {
         id: Date.now().toString(),
         userId: authState.user.id,
         status,
-        timestamp: new Date().toISOString()
+        timestamp: now.toISOString(),
+        previousStatus: authState.user.status,
+        duration: authState.user.status === 'online' && authState.user.lastOnlineTimestamp && status !== 'online'
+          ? now.getTime() - new Date(authState.user.lastOnlineTimestamp).getTime()
+          : undefined
       };
       storage.addActivity(activityRecord);
       

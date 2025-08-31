@@ -80,7 +80,8 @@ const Players = () => {
       adminLevel: newPlayer.adminLevel,
       status: 'offline',
       lastActivity: new Date().toISOString(),
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      totalOnlineTime: 0
     };
 
     storage.addUser(player);

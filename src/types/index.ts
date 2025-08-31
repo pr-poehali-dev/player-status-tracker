@@ -7,6 +7,8 @@ export interface User {
   status: 'online' | 'afk' | 'offline';
   lastActivity: string;
   createdAt: string;
+  totalOnlineTime: number; // in milliseconds
+  lastOnlineTimestamp?: string;
 }
 
 export interface ActivityRecord {
@@ -14,7 +16,8 @@ export interface ActivityRecord {
   userId: string;
   status: 'online' | 'afk' | 'offline';
   timestamp: string;
-  duration?: number;
+  duration?: number; // in milliseconds
+  previousStatus?: 'online' | 'afk' | 'offline';
 }
 
 export interface SystemAction {
@@ -41,4 +44,13 @@ export interface Statistics {
 export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
+}
+
+export interface SystemSettings {
+  siteName: string;
+  isRegistrationOpen: boolean;
+  isSiteOpen: boolean;
+  maintenanceMessage?: string;
+  sessionTimeout: number; // in minutes
+  afkTimeout: number; // in minutes
 }
