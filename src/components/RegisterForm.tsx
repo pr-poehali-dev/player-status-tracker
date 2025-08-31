@@ -64,6 +64,14 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
     }
 
     try {
+      // Verify data integrity before registration
+      const integrity = storage.verifyDataIntegrity();
+      if (!integrity.valid) {
+        console.warn('Проблемы с целостностью данных:', integrity.issues);
+        // Try to restore from backup if needed
+        storage.restoreUsersFromBackup();
+      }
+
       // Create user with default admin level 1
       const newUser = await storage.createSecureUser({
         nickname: formData.nickname,

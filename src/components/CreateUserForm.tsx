@@ -63,7 +63,19 @@ const CreateUserForm: React.FC<CreateUserFormProps> = ({ onUserCreated }) => {
     }
 
     try {
-      // Create user with secure password hashing
+      // Verify data integrity before creating user
+      const integrity = storage.verifyDataIntegrity();
+      if (!integrity.valid) {
+        console.warn('Проблемы с целостностью данных перед созданием пользователя:', integrity.issues);
+        // Try to restore from backup if needed
+        if (!storage.restoreUsersFromBackup()) {
+          setError('Обнаружены проблемы с данными. Обратитесь к администратору.');
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Create user with secure password hashing and enhanced saving
       const newUser = await storage.createSecureUser({
         nickname: formData.nickname,
         login: formData.login,
@@ -83,6 +95,13 @@ const CreateUserForm: React.FC<CreateUserFormProps> = ({ onUserCreated }) => {
         monthlyOfflineTime: {},
         lastStatusTimestamp: new Date().toISOString()
       });
+
+      // Double-check user was actually saved
+      const savedUsers = storage.getUsers();
+      const savedUser = savedUsers.find(u => u.id === newUser.id);
+      if (!savedUser) {
+        throw new Error('Критическая ошибка: пользователь не был сохранен в системе');
+      }
 
       // Log the action
       const action: SystemAction = {

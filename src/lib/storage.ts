@@ -17,13 +17,67 @@ export const storage = {
   },
 
   saveUsers: (users: User[]) => {
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+    try {
+      // Create backup before saving
+      const backup = localStorage.getItem(STORAGE_KEYS.USERS);
+      localStorage.setItem(STORAGE_KEYS.USERS + '_backup', backup || '[]');
+      
+      // Save new data
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+      
+      // Verify save was successful
+      const verification = localStorage.getItem(STORAGE_KEYS.USERS);
+      if (!verification || JSON.parse(verification).length !== users.length) {
+        // Restore from backup if save failed
+        if (backup) {
+          localStorage.setItem(STORAGE_KEYS.USERS, backup);
+        }
+        throw new Error('Ошибка сохранения пользователей');
+      }
+    } catch (error) {
+      console.error('Критическая ошибка сохранения:', error);
+      throw error;
+    }
   },
 
   addUser: (user: User) => {
-    const users = storage.getUsers();
-    users.push(user);
-    storage.saveUsers(users);
+    try {
+      const users = storage.getUsers();
+      
+      // Check for duplicate login
+      if (users.some(u => u.login === user.login)) {
+        throw new Error('Пользователь с таким логином уже существует');
+      }
+      
+      // Check for duplicate nickname
+      if (users.some(u => u.nickname === user.nickname)) {
+        throw new Error('Пользователь с таким никнеймом уже существует');
+      }
+      
+      // Add user to array
+      users.push(user);
+      
+      // Force save with retries
+      let saveAttempts = 3;
+      while (saveAttempts > 0) {
+        try {
+          storage.saveUsers(users);
+          break;
+        } catch (saveError) {
+          saveAttempts--;
+          if (saveAttempts === 0) {
+            throw new Error('Не удалось сохранить пользователя после нескольких попыток');
+          }
+        }
+      }
+      
+      // Log successful user creation
+      storage.addLog('system', `Создан новый пользователь: ${user.nickname} (${user.login})`);
+      
+    } catch (error) {
+      console.error('Ошибка добавления пользователя:', error);
+      throw error;
+    }
   },
 
   updateUser: (userId: string, updates: Partial<User>) => {
@@ -143,25 +197,109 @@ export const storage = {
   createSecureUser: async (userData: Omit<User, 'id' | 'passwordHash'> & { password: string }): Promise<User> => {
     const { password, ...userDataWithoutPassword } = userData;
     
-    // Validate password strength
-    const validation = SecurityManager.validatePasswordStrength(password);
-    if (!validation.valid) {
-      throw new Error(validation.message);
+    try {
+      // Validate password strength
+      const validation = SecurityManager.validatePasswordStrength(password);
+      if (!validation.valid) {
+        throw new Error(validation.message);
+      }
+      
+      const passwordHash = await SecurityManager.hashPassword(password);
+      
+      const newUser: User = {
+        ...userDataWithoutPassword,
+        id: Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9),
+        passwordHash,
+        totalOnlineTime: 0,
+        totalAfkTime: 0,
+        totalOfflineTime: 0,
+        monthlyOnlineTime: {},
+        monthlyAfkTime: {},
+        monthlyOfflineTime: {},
+        monthlyNorm: userData.monthlyNorm || 160,
+        isBlocked: false,
+        status: 'offline',
+        createdAt: new Date().toISOString(),
+        activityHistory: []
+      };
+      
+      // Use enhanced addUser with safe saving
+      storage.addUser(newUser);
+      
+      // Double-check user was saved
+      const savedUsers = storage.getUsers();
+      const savedUser = savedUsers.find(u => u.id === newUser.id);
+      if (!savedUser) {
+        throw new Error('Пользователь не был сохранен в системе');
+      }
+      
+      return newUser;
+      
+    } catch (error) {
+      console.error('Ошибка создания защищенного пользователя:', error);
+      throw error;
+    }
+  },
+
+  // Safe restore function for corrupted data
+  restoreUsersFromBackup: (): boolean => {
+    try {
+      const backup = localStorage.getItem(STORAGE_KEYS.USERS + '_backup');
+      if (backup) {
+        const backupUsers = JSON.parse(backup);
+        if (Array.isArray(backupUsers)) {
+          localStorage.setItem(STORAGE_KEYS.USERS, backup);
+          storage.addLog('system', 'Пользователи восстановлены из резервной копии');
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error('Ошибка восстановления резервной копии:', error);
+      return false;
+    }
+  },
+
+  // Verify data integrity
+  verifyDataIntegrity: (): { valid: boolean; issues: string[] } => {
+    const issues: string[] = [];
+    
+    try {
+      const users = storage.getUsers();
+      
+      if (!Array.isArray(users)) {
+        issues.push('Данные пользователей повреждены');
+      }
+      
+      // Check for duplicate logins
+      const logins = users.map(u => u.login);
+      const uniqueLogins = new Set(logins);
+      if (logins.length !== uniqueLogins.size) {
+        issues.push('Обнаружены дублированные логины');
+      }
+      
+      // Check for duplicate IDs
+      const ids = users.map(u => u.id);
+      const uniqueIds = new Set(ids);
+      if (ids.length !== uniqueIds.size) {
+        issues.push('Обнаружены дублированные ID');
+      }
+      
+      // Check for required fields
+      users.forEach((user, index) => {
+        if (!user.id || !user.login || !user.nickname) {
+          issues.push(`Пользователь ${index + 1} имеет неполные данные`);
+        }
+      });
+      
+    } catch (error) {
+      issues.push('Критическая ошибка при проверке данных');
     }
     
-    const passwordHash = await SecurityManager.hashPassword(password);
-    
-    const newUser: User = {
-      ...userDataWithoutPassword,
-      id: Date.now().toString(),
-      passwordHash,
-      totalOnlineTime: 0,
-      monthlyOnlineTime: {},
-      monthlyNorm: userData.monthlyNorm || 160
+    return {
+      valid: issues.length === 0,
+      issues
     };
-    
-    storage.addUser(newUser);
-    return newUser;
   },
 
   // Initialize default data
@@ -352,6 +490,24 @@ export const storage = {
       return true;
     }
     return false;
+  },
+
+  // System logs management
+  getLogs: () => {
+    const data = localStorage.getItem('gameLogs');
+    return data ? JSON.parse(data) : [];
+  },
+
+  addLog: (type: string, message: string) => {
+    const logs = storage.getLogs();
+    const logEntry = {
+      id: Date.now().toString(),
+      type,
+      message,
+      timestamp: new Date().toISOString()
+    };
+    logs.push(logEntry);
+    localStorage.setItem('gameLogs', JSON.stringify(logs));
   },
 
   // Optimize all system data
