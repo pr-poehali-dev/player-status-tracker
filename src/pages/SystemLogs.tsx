@@ -125,7 +125,8 @@ const SystemLogs = () => {
     link.click();
   };
 
-  const canViewLogs = currentUser && currentUser.adminLevel >= 4;
+  const canViewLogs = currentUser && currentUser.adminLevel >= 9;
+  const canExportLogs = currentUser && currentUser.adminLevel >= 9;
 
   return (
     <div className="space-y-6">
@@ -134,7 +135,7 @@ const SystemLogs = () => {
           <h1 className="text-3xl font-bold text-gray-900">Журнал действий</h1>
           <p className="text-gray-600 mt-2">История всех административных действий в системе</p>
         </div>
-        {canViewLogs && filteredActions.length > 0 && (
+        {canExportLogs && filteredActions.length > 0 && (
           <Button onClick={exportLogs} variant="outline">
             <Icon name="Download" size={16} className="mr-2" />
             Экспорт в CSV
@@ -147,7 +148,7 @@ const SystemLogs = () => {
           <CardContent className="py-12 text-center">
             <Icon name="Lock" className="mx-auto h-12 w-12 text-gray-400 mb-4" />
             <p className="text-gray-500">У вас недостаточно прав для просмотра журнала действий.</p>
-            <p className="text-sm text-gray-400 mt-2">Требуется уровень администратора 4 или выше.</p>
+            <p className="text-sm text-gray-400 mt-2">Требуется уровень администратора 9 или выше.</p>
           </CardContent>
         </Card>
       ) : (

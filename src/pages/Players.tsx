@@ -68,6 +68,7 @@ const Players = () => {
   };
 
   const canManageUsers = currentUser && currentUser.adminLevel >= 9;
+  const canViewExtended = currentUser && currentUser.adminLevel >= 9;
 
   const handleAddPlayer = () => {
     if (!newPlayer.login || !newPlayer.password || !newPlayer.nickname) return;
@@ -81,7 +82,8 @@ const Players = () => {
       status: 'offline',
       lastActivity: new Date().toISOString(),
       createdAt: new Date().toISOString(),
-      totalOnlineTime: 0
+      totalOnlineTime: 0,
+      monthlyOnlineTime: {}
     };
 
     storage.addUser(player);
@@ -268,6 +270,12 @@ const Players = () => {
                       <span>Уровень {player.adminLevel}</span>
                       <span>•</span>
                       <span>Активность: {formatDate(player.lastActivity)}</span>
+                      {canViewExtended && (
+                        <>
+                          <span>•</span>
+                          <span>Онлайн: {Math.floor((player.totalOnlineTime || 0) / 1000 / 60 / 60)}ч</span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -275,20 +283,22 @@ const Players = () => {
                 <div className="flex items-center space-x-3">
                   {getStatusBadge(player.status)}
                   
-                  <div className="flex space-x-1">
-                    {(['online', 'afk', 'offline'] as const).map((status) => (
-                      <Button
-                        key={status}
-                        size="sm"
-                        variant={player.status === status ? "default" : "outline"}
-                        onClick={() => handleStatusChange(player.id, status)}
-                        disabled={!canManageUsers && currentUser?.id !== player.id}
-                        className="h-8 px-2"
-                      >
-                        {status === 'online' ? 'Онлайн' : status === 'afk' ? 'АФК' : 'Офлайн'}
-                      </Button>
-                    ))}
-                  </div>
+                  {(canManageUsers || currentUser?.id === player.id) && (
+                    <div className="flex space-x-1">
+                      {(['online', 'afk', 'offline'] as const).map((status) => (
+                        <Button
+                          key={status}
+                          size="sm"
+                          variant={player.status === status ? "default" : "outline"}
+                          onClick={() => handleStatusChange(player.id, status)}
+                          disabled={!canManageUsers && currentUser?.id !== player.id}
+                          className="h-8 px-2"
+                        >
+                          {status === 'online' ? 'Онлайн' : status === 'afk' ? 'АФК' : 'Офлайн'}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
 
                   {canManageUsers && player.id !== currentUser?.id && (
                     <Button

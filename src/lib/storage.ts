@@ -121,15 +121,20 @@ export const storage = {
       storage.addUser(defaultAdmin);
     }
     
-    // Migrate users without totalOnlineTime
+    // Migrate users without totalOnlineTime or monthlyOnlineTime
     const existingUsers = storage.getUsers();
     let needsUpdate = false;
     const updatedUsers = existingUsers.map(user => {
+      let updated = { ...user };
       if (!('totalOnlineTime' in user)) {
         needsUpdate = true;
-        return { ...user, totalOnlineTime: 0 };
+        updated.totalOnlineTime = 0;
       }
-      return user;
+      if (!('monthlyOnlineTime' in user)) {
+        needsUpdate = true;
+        updated.monthlyOnlineTime = {};
+      }
+      return updated;
     });
     if (needsUpdate) {
       storage.saveUsers(updatedUsers);

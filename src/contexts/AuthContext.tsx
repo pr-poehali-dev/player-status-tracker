@@ -69,10 +69,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Calculate online time if user was online
       const now = new Date();
       let totalOnlineTime = authState.user.totalOnlineTime || 0;
+      const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      let monthlyOnlineTime = { ...(authState.user.monthlyOnlineTime || {}) };
       
       if (authState.user.status === 'online' && authState.user.lastOnlineTimestamp) {
         const onlineTime = now.getTime() - new Date(authState.user.lastOnlineTimestamp).getTime();
         totalOnlineTime += onlineTime;
+        monthlyOnlineTime[monthKey] = (monthlyOnlineTime[monthKey] || 0) + onlineTime;
       }
       
       // Update user status to offline
@@ -80,6 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         status: 'offline', 
         lastActivity: now.toISOString(),
         totalOnlineTime,
+        monthlyOnlineTime,
         lastOnlineTimestamp: undefined
       });
       
@@ -109,12 +113,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const now = new Date();
       let updates: Partial<User> = { status, lastActivity: now.toISOString() };
       let totalOnlineTime = authState.user.totalOnlineTime || 0;
+      const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      let monthlyOnlineTime = { ...(authState.user.monthlyOnlineTime || {}) };
       
       // Calculate online time when switching from online to another status
       if (authState.user.status === 'online' && status !== 'online' && authState.user.lastOnlineTimestamp) {
         const onlineTime = now.getTime() - new Date(authState.user.lastOnlineTimestamp).getTime();
         totalOnlineTime += onlineTime;
+        monthlyOnlineTime[monthKey] = (monthlyOnlineTime[monthKey] || 0) + onlineTime;
         updates.totalOnlineTime = totalOnlineTime;
+        updates.monthlyOnlineTime = monthlyOnlineTime;
         updates.lastOnlineTimestamp = undefined;
       }
       

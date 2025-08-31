@@ -9,6 +9,7 @@ export interface User {
   createdAt: string;
   totalOnlineTime: number; // in milliseconds
   lastOnlineTimestamp?: string;
+  monthlyOnlineTime?: { [key: string]: number }; // key: "YYYY-MM", value: milliseconds
 }
 
 export interface ActivityRecord {

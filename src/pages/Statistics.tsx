@@ -4,6 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { storage } from '@/lib/storage';
 import { User, ActivityRecord } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import ProtectedFeature from '@/components/ProtectedFeature';
 import Icon from '@/components/ui/icon';
 
 const Statistics = () => {
@@ -11,6 +13,7 @@ const Statistics = () => {
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>('all');
   const [timeFilter, setTimeFilter] = useState<string>('all');
+  const { user: currentUser } = useAuth();
 
   useEffect(() => {
     const loadData = () => {
@@ -70,6 +73,36 @@ const Statistics = () => {
     })).sort((a, b) => b.onlineCount - a.onlineCount);
 
     return userActivityCount.slice(0, 5);
+  };
+
+  const getMonthlyStats = (userId?: string) => {
+    const now = new Date();
+    const months = [];
+    
+    // Get last 6 months
+    for (let i = 0; i < 6; i++) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthName = date.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+      
+      let onlineTime = 0;
+      if (userId) {
+        const user = users.find(u => u.id === userId);
+        onlineTime = user?.monthlyOnlineTime?.[monthKey] || 0;
+      } else {
+        users.forEach(user => {
+          onlineTime += user.monthlyOnlineTime?.[monthKey] || 0;
+        });
+      }
+      
+      months.unshift({
+        key: monthKey,
+        name: monthName,
+        onlineTime
+      });
+    }
+    
+    return months;
   };
 
   const formatDate = (dateString: string) => {
@@ -183,13 +216,53 @@ const Statistics = () => {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Active Users */}
+      {/* Monthly Statistics - Protected Feature */}
+      <ProtectedFeature requiredLevel={9} feature="месячной статистике">
         <Card>
           <CardHeader>
-            <CardTitle>Наиболее активные игроки</CardTitle>
-            <CardDescription>Рейтинг по количеству онлайн-сессий</CardDescription>
+            <CardTitle className="flex items-center justify-between">
+              <span>Статистика по месяцам</span>
+              <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
+                <Icon name="Crown" size={12} className="mr-1" />
+                Уровень 9+
+              </Badge>
+            </CardTitle>
+            <CardDescription>Время онлайн за последние 6 месяцев</CardDescription>
           </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {getMonthlyStats(selectedUser !== 'all' ? selectedUser : undefined).map((month) => (
+                <div key={month.key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <span className="text-sm font-medium">{month.name}</span>
+                  <div className="text-right">
+                    <span className="text-sm font-bold">
+                      {Math.floor(month.onlineTime / 1000 / 60 / 60)}ч {Math.floor((month.onlineTime / 1000 / 60) % 60)}м
+                    </span>
+                    <p className="text-xs text-gray-500">
+                      {Math.floor(month.onlineTime / 1000 / 60 / 60 / 24)} дней
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </ProtectedFeature>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Top Active Users - Protected for 9+ */}
+        <ProtectedFeature requiredLevel={9} feature="рейтингу активности">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Наиболее активные игроки</span>
+                <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
+                  <Icon name="Crown" size={12} className="mr-1" />
+                  Уровень 9+
+                </Badge>
+              </CardTitle>
+              <CardDescription>Рейтинг по количеству онлайн-сессий</CardDescription>
+            </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {topUsers.map((user, index) => (
@@ -211,7 +284,8 @@ const Statistics = () => {
               ))}
             </div>
           </CardContent>
-        </Card>
+          </Card>
+        </ProtectedFeature>
 
         {/* Recent Activity */}
         <Card>
@@ -271,6 +345,32 @@ const Statistics = () => {
                 <p className="text-sm text-gray-500">Выходов</p>
               </div>
             </div>
+
+            <ProtectedFeature requiredLevel={9} feature="детальной статистике времени" showMessage={false}>
+              <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+                <h4 className="font-medium mb-2">Общее время онлайн:</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">За все время:</p>
+                    <p className="text-lg font-bold text-blue-600">
+                      {Math.floor((users.find(u => u.id === selectedUser)?.totalOnlineTime || 0) / 1000 / 60 / 60)}ч
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Текущий месяц:</p>
+                    <p className="text-lg font-bold text-green-600">
+                      {(() => {
+                        const now = new Date();
+                        const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                        const user = users.find(u => u.id === selectedUser);
+                        const monthTime = user?.monthlyOnlineTime?.[monthKey] || 0;
+                        return Math.floor(monthTime / 1000 / 60 / 60);
+                      })()}ч
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </ProtectedFeature>
 
             <div className="space-y-3">
               <h4 className="font-medium">История активности:</h4>

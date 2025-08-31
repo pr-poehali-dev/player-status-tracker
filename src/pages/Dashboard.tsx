@@ -3,9 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { storage } from '@/lib/storage';
 import { User, Statistics } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
+import ProtectedFeature from '@/components/ProtectedFeature';
 import Icon from '@/components/ui/icon';
 
 const Dashboard = () => {
+  const { user: currentUser } = useAuth();
   const [stats, setStats] = useState<Statistics>({
     totalUsers: 0,
     onlineUsers: 0,
@@ -131,11 +134,18 @@ const Dashboard = () => {
 
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Последняя активность</CardTitle>
-            <CardDescription>Недавно активные игроки</CardDescription>
-          </CardHeader>
+        <ProtectedFeature requiredLevel={9} feature="последней активности">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Последняя активность</span>
+                <Badge variant="outline" className="bg-yellow-50 text-yellow-700">
+                  <Icon name="Crown" size={12} className="mr-1" />
+                  Уровень 9+
+                </Badge>
+              </CardTitle>
+              <CardDescription>Недавно активные игроки</CardDescription>
+            </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {recentUsers.map((user) => (
@@ -157,7 +167,8 @@ const Dashboard = () => {
               ))}
             </div>
           </CardContent>
-        </Card>
+          </Card>
+        </ProtectedFeature>
 
         <Card>
           <CardHeader>
