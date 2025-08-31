@@ -1,7 +1,7 @@
 export interface User {
   id: string;
   login: string;
-  passwordHash?: string; // SHA-256 hash
+  password?: string;
   nickname: string;
   adminLevel: number;
   status: 'online' | 'afk' | 'offline';
@@ -10,7 +10,6 @@ export interface User {
   totalOnlineTime: number; // in milliseconds
   lastOnlineTimestamp?: string;
   monthlyOnlineTime?: { [key: string]: number }; // key: "YYYY-MM", value: milliseconds
-  monthlyNorm?: number; // monthly norm in hours
 }
 
 export interface ActivityRecord {

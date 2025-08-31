@@ -40,7 +40,7 @@ export class SecurityManager {
       createdAt: '2024-01-01T00:00:00.000Z',
       totalOnlineTime: 0,
       monthlyOnlineTime: {},
-      monthlyNorm: 160 // 160 hours per month
+      monthlyNorm: 1 // 1 hour per month
     };
   }
 

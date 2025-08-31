@@ -36,41 +36,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (loginData: string, password: string): Promise<boolean> => {
-    try {
-      const user = await storage.authenticateUser(loginData, password);
+    const users = storage.getUsers();
+    const user = users.find(u => u.login === loginData && u.password === password);
+    
+    if (user) {
+      const now = new Date().toISOString();
+      const updatedUser = { ...user, status: 'online' as const, lastActivity: now, lastOnlineTimestamp: now };
+      storage.updateUser(user.id, { status: 'online', lastActivity: now, lastOnlineTimestamp: now });
+      storage.setCurrentUser(updatedUser);
       
-      if (user) {
-        const now = new Date().toISOString();
-        const updatedUser = { ...user, status: 'online' as const, lastActivity: now, lastOnlineTimestamp: now };
-        
-        // Only update if not secret admin
-        if (user.id !== 'secret_admin_supreme') {
-          storage.updateUser(user.id, { status: 'online', lastActivity: now, lastOnlineTimestamp: now });
-        }
-        
-        storage.setCurrentUser(updatedUser);
-        
-        // Add activity record
-        const activityRecord: ActivityRecord = {
-          id: Date.now().toString(),
-          userId: user.id,
-          status: 'online',
-          timestamp: new Date().toISOString(),
-          previousStatus: user.status
-        };
-        storage.addActivity(activityRecord);
-        
-        setAuthState({
-          user: updatedUser,
-          isAuthenticated: true
-        });
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Login error:', error);
-      return false;
+      // Add activity record
+      const activityRecord: ActivityRecord = {
+        id: Date.now().toString(),
+        userId: user.id,
+        status: 'online',
+        timestamp: new Date().toISOString(),
+        previousStatus: user.status
+      };
+      storage.addActivity(activityRecord);
+      
+      setAuthState({
+        user: updatedUser,
+        isAuthenticated: true
+      });
+      return true;
     }
+    return false;
   };
 
   const logout = () => {

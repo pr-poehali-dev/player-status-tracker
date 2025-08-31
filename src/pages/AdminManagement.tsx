@@ -144,7 +144,7 @@ const AdminManagement = () => {
                       <h3 className="font-medium">{user.nickname}</h3>
                       <p className="text-sm text-gray-500">@{user.login}</p>
                       <p className="text-xs text-gray-400 mt-1">
-                        Время онлайн: {formatTime(user.totalOnlineTime || 0)} | Норма: {user.monthlyNorm || 160}ч/мес
+                        Время онлайн: {formatTime(user.totalOnlineTime || 0)}
                       </p>
                     </div>
                     <div className="text-right">
