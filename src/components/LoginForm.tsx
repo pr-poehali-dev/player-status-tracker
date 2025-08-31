@@ -5,7 +5,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
+import { storage } from '@/lib/storage';
 import SecurityInfo from '@/components/SecurityInfo';
+import RegisterForm from '@/components/RegisterForm';
 import Icon from '@/components/ui/icon';
 
 const LoginForm = () => {
@@ -13,6 +15,7 @@ const LoginForm = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
   const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,6 +35,16 @@ const LoginForm = () => {
     }
     setIsLoading(false);
   };
+
+  const settings = storage.getSettings();
+
+  if (showRegister) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <RegisterForm onSwitchToLogin={() => setShowRegister(false)} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -78,6 +91,23 @@ const LoginForm = () => {
               {isLoading ? 'Вход...' : 'Войти'}
             </Button>
           </form>
+
+          {settings.isRegistrationOpen && (
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-600 mb-3">
+                Нет аккаунта?
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => setShowRegister(true)}
+                className="w-full"
+              >
+                <Icon name="UserPlus" className="mr-2 h-4 w-4" />
+                Зарегистрироваться
+              </Button>
+            </div>
+          )}
+
           <div className="mt-6 text-sm text-gray-500 text-center">
             <div className="p-4 bg-blue-50 rounded-lg">
               <p className="font-medium text-blue-800 mb-2">Информация о безопасности:</p>
@@ -85,7 +115,7 @@ const LoginForm = () => {
                 <p>• Пароли зашифрованы SHA-256</p>
                 <p>• Ограничение попыток входа</p>
                 <p>• Защита от XSS атак</p>
-                <p>• Учетные данные получите у администратора</p>
+                <p>• {settings.isRegistrationOpen ? 'Доступна самостоятельная регистрация' : 'Учетные данные получите у администратора'}</p>
               </div>
             </div>
           </div>

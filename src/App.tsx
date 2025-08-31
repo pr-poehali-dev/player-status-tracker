@@ -6,9 +6,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import LoginForm from "@/components/LoginForm";
+import SiteStatusGuard from "@/components/SiteStatusGuard";
 import Layout from "@/components/Layout";
 import Dashboard from "@/pages/Dashboard";
 import Players from "@/pages/Players";
+import PlayerStatistics from "@/pages/PlayerStatistics";
 import Statistics from "@/pages/Statistics";
 import AdminManagement from "@/pages/AdminManagement";
 import SystemLogs from "@/pages/SystemLogs";
@@ -32,22 +34,25 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" />} />
-            <Route path="/login" element={<PublicRoute><LoginForm /></PublicRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/players" element={<ProtectedRoute><Players /></ProtectedRoute>} />
-            <Route path="/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
-            <Route path="/admin-management" element={<ProtectedRoute><AdminManagement /></ProtectedRoute>} />
-            <Route path="/system-logs" element={<ProtectedRoute><SystemLogs /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
+      <SiteStatusGuard>
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" />} />
+              <Route path="/login" element={<PublicRoute><LoginForm /></PublicRoute>} />
+              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/players" element={<ProtectedRoute><Players /></ProtectedRoute>} />
+              <Route path="/players/:userId" element={<ProtectedRoute><PlayerStatistics /></ProtectedRoute>} />
+              <Route path="/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
+              <Route path="/admin-management" element={<ProtectedRoute><AdminManagement /></ProtectedRoute>} />
+              <Route path="/system-logs" element={<ProtectedRoute><SystemLogs /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </SiteStatusGuard>
     </TooltipProvider>
   </QueryClientProvider>
 );

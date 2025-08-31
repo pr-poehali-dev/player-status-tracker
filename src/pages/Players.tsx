@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -295,6 +296,13 @@ const Players = () => {
 
                 <div className="flex items-center space-x-3">
                   {getStatusBadge(player.status)}
+                  
+                  <Link to={`/players/${player.id}`}>
+                    <Button size="sm" variant="outline">
+                      <Icon name="BarChart3" className="mr-1 h-4 w-4" />
+                      Статистика
+                    </Button>
+                  </Link>
                   
                   {(canManageUsers || currentUser?.id === player.id) && (
                     <div className="flex space-x-1">
