@@ -49,7 +49,7 @@ const LoginForm = () => {
   }
 
   if (showUnblock) {
-    return <UnblockUserForm />;
+    return <UnblockUserForm onBack={() => setShowUnblock(false)} />;
   }
 
   return (

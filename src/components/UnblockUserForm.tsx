@@ -7,7 +7,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { storage } from '@/lib/storage';
 import Icon from '@/components/ui/icon';
 
-const UnblockUserForm = () => {
+interface UnblockUserFormProps {
+  onBack?: () => void;
+}
+
+const UnblockUserForm: React.FC<UnblockUserFormProps> = ({ onBack }) => {
   const [unblockData, setUnblockData] = useState({ login: '', code: '' });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -105,19 +109,34 @@ const UnblockUserForm = () => {
               </Alert>
             )}
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Icon name="Loader2" className="mr-2 h-4 w-4 animate-spin" />
-                  Разблокировка...
-                </>
-              ) : (
-                <>
-                  <Icon name="Unlock" className="mr-2 h-4 w-4" />
-                  Разблокировать аккаунт
-                </>
+            <div className="space-y-2">
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Icon name="Loader2" className="mr-2 h-4 w-4 animate-spin" />
+                    Разблокировка...
+                  </>
+                ) : (
+                  <>
+                    <Icon name="Unlock" className="mr-2 h-4 w-4" />
+                    Разблокировать аккаунт
+                  </>
+                )}
+              </Button>
+              
+              {onBack && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={onBack}
+                  className="w-full"
+                  disabled={isLoading}
+                >
+                  <Icon name="ArrowLeft" className="mr-2 h-4 w-4" />
+                  Назад к входу
+                </Button>
               )}
-            </Button>
+            </div>
           </form>
 
           <div className="mt-6 p-4 bg-blue-50 rounded-lg">
