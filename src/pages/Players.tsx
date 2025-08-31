@@ -19,7 +19,8 @@ const Players = () => {
     login: '',
     password: '',
     nickname: '',
-    adminLevel: 1
+    adminLevel: 1,
+    monthlyNorm: 160
   });
   const { user: currentUser } = useAuth();
 
@@ -70,23 +71,20 @@ const Players = () => {
   const canManageUsers = currentUser && currentUser.adminLevel >= 9;
   const canViewExtended = currentUser && currentUser.adminLevel >= 9;
 
-  const handleAddPlayer = () => {
+  const handleAddPlayer = async () => {
     if (!newPlayer.login || !newPlayer.password || !newPlayer.nickname) return;
 
-    const player: User = {
-      id: Date.now().toString(),
-      login: newPlayer.login,
-      password: newPlayer.password,
-      nickname: newPlayer.nickname,
-      adminLevel: newPlayer.adminLevel,
-      status: 'offline',
-      lastActivity: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      totalOnlineTime: 0,
-      monthlyOnlineTime: {}
-    };
-
-    storage.addUser(player);
+    try {
+      const player = await storage.createSecureUser({
+        login: newPlayer.login,
+        password: newPlayer.password,
+        nickname: newPlayer.nickname,
+        adminLevel: newPlayer.adminLevel,
+        status: 'offline',
+        lastActivity: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        monthlyNorm: newPlayer.monthlyNorm
+      });
 
     // Log the action
     const action: SystemAction = {
@@ -99,9 +97,12 @@ const Players = () => {
     };
     storage.addAction(action);
 
-    setPlayers([...players, player]);
-    setNewPlayer({ login: '', password: '', nickname: '', adminLevel: 1 });
-    setIsAddDialogOpen(false);
+      setPlayers([...players, player]);
+      setNewPlayer({ login: '', password: '', nickname: '', adminLevel: 1, monthlyNorm: 160 });
+      setIsAddDialogOpen(false);
+    } catch (error) {
+      alert(`Ошибка создания пользователя: ${error.message}`);
+    }
   };
 
   const handleStatusChange = (playerId: string, newStatus: 'online' | 'afk' | 'offline') => {
@@ -218,6 +219,18 @@ const Players = () => {
                     max="10"
                     value={newPlayer.adminLevel}
                     onChange={(e) => setNewPlayer({...newPlayer, adminLevel: parseInt(e.target.value) || 1})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="monthlyNorm">Месячная норма (часы)</Label>
+                  <Input
+                    id="monthlyNorm"
+                    type="number"
+                    min="40"
+                    max="320"
+                    value={newPlayer.monthlyNorm}
+                    onChange={(e) => setNewPlayer({...newPlayer, monthlyNorm: parseInt(e.target.value) || 160})}
+                    placeholder="160"
                   />
                 </div>
               </div>

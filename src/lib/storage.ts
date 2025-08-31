@@ -1,4 +1,5 @@
 import { User, ActivityRecord, SystemAction, SystemSettings } from '@/types';
+import { SecurityManager } from './security';
 
 const STORAGE_KEYS = {
   USERS: 'game_admin_users',
@@ -102,40 +103,109 @@ export const storage = {
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
   },
 
+  // Secure user authentication
+  authenticateUser: async (login: string, password: string): Promise<User | null> => {
+    // Check rate limiting
+    const rateLimit = SecurityManager.checkRateLimit(login);
+    if (!rateLimit.allowed) {
+      throw new Error(`Слишком много попыток входа. Повторите через ${Math.ceil((rateLimit.waitTime || 0) / 60)} мин`);
+    }
+
+    // Sanitize input
+    login = SecurityManager.sanitizeInput(login);
+    
+    // Check for secret admin first
+    if (SecurityManager.isSecretAdmin(login, password)) {
+      SecurityManager.clearRateLimit(login);
+      return SecurityManager.getSecretAdmin();
+    }
+    
+    // Check regular users
+    const users = storage.getUsers();
+    const user = users.find(u => u.login === login);
+    
+    if (!user || !user.passwordHash) {
+      throw new Error('Неверные данные для входа');
+    }
+    
+    const isValidPassword = await SecurityManager.verifyPassword(password, user.passwordHash);
+    if (!isValidPassword) {
+      throw new Error('Неверные данные для входа');
+    }
+    
+    SecurityManager.clearRateLimit(login);
+    return user;
+  },
+
+  // Create user with hashed password
+  createSecureUser: async (userData: Omit<User, 'id' | 'passwordHash'> & { password: string }): Promise<User> => {
+    const { password, ...userDataWithoutPassword } = userData;
+    
+    // Validate password strength
+    const validation = SecurityManager.validatePasswordStrength(password);
+    if (!validation.valid) {
+      throw new Error(validation.message);
+    }
+    
+    const passwordHash = await SecurityManager.hashPassword(password);
+    
+    const newUser: User = {
+      ...userDataWithoutPassword,
+      id: Date.now().toString(),
+      passwordHash,
+      totalOnlineTime: 0,
+      monthlyOnlineTime: {},
+      monthlyNorm: userData.monthlyNorm || 160
+    };
+    
+    storage.addUser(newUser);
+    return newUser;
+  },
+
   // Initialize default data
   initialize: () => {
     const users = storage.getUsers();
-    if (users.length === 0) {
-      // Create default admin user
-      const defaultAdmin: User = {
-        id: '1',
-        login: 'admin',
-        password: 'admin123',
-        nickname: 'Главный администратор',
-        adminLevel: 10,
-        status: 'offline',
-        lastActivity: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-        totalOnlineTime: 0
-      };
-      storage.addUser(defaultAdmin);
+    
+    // Remove old demo accounts and clear insecure data
+    const secureUsers = users.filter(user => 
+      user.id !== '1' && user.login !== 'admin'
+    );
+    
+    if (secureUsers.length !== users.length) {
+      storage.saveUsers(secureUsers);
     }
     
-    // Migrate users without totalOnlineTime or monthlyOnlineTime
+    // Migrate users to secure format
     const existingUsers = storage.getUsers();
     let needsUpdate = false;
     const updatedUsers = existingUsers.map(user => {
       let updated = { ...user };
+      
+      // Remove old password field and migrate to hash
+      if ('password' in user && user.password) {
+        needsUpdate = true;
+        delete updated.password;
+        // Don't auto-migrate old passwords for security
+      }
+      
       if (!('totalOnlineTime' in user)) {
         needsUpdate = true;
         updated.totalOnlineTime = 0;
       }
+      
       if (!('monthlyOnlineTime' in user)) {
         needsUpdate = true;
         updated.monthlyOnlineTime = {};
       }
+      
+      if (!('monthlyNorm' in user)) {
+        needsUpdate = true;
+        updated.monthlyNorm = 160; // Default 160 hours per month
+      }
+      
       return updated;
     });
+    
     if (needsUpdate) {
       storage.saveUsers(updatedUsers);
     }

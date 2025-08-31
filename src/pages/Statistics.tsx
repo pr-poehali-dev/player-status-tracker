@@ -348,8 +348,8 @@ const Statistics = () => {
 
             <ProtectedFeature requiredLevel={9} feature="детальной статистике времени" showMessage={false}>
               <div className="mb-4 p-4 bg-blue-50 rounded-lg">
-                <h4 className="font-medium mb-2">Общее время онлайн:</h4>
-                <div className="grid grid-cols-2 gap-4">
+                <h4 className="font-medium mb-2">Статистика времени онлайн:</h4>
+                <div className="grid grid-cols-3 gap-4">
                   <div>
                     <p className="text-sm text-gray-600">За все время:</p>
                     <p className="text-lg font-bold text-blue-600">
@@ -367,6 +367,32 @@ const Statistics = () => {
                         return Math.floor(monthTime / 1000 / 60 / 60);
                       })()}ч
                     </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Месячная норма:</p>
+                    <div className="flex items-center space-x-2">
+                      <p className="text-lg font-bold text-purple-600">
+                        {users.find(u => u.id === selectedUser)?.monthlyNorm || 160}ч
+                      </p>
+                      {(() => {
+                        const now = new Date();
+                        const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                        const user = users.find(u => u.id === selectedUser);
+                        const monthTime = Math.floor((user?.monthlyOnlineTime?.[monthKey] || 0) / 1000 / 60 / 60);
+                        const norm = user?.monthlyNorm || 160;
+                        const percentage = Math.round((monthTime / norm) * 100);
+                        
+                        return (
+                          <div className={`text-xs px-2 py-1 rounded ${
+                            percentage >= 100 ? 'bg-green-100 text-green-800' :
+                            percentage >= 80 ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {percentage}%
+                          </div>
+                        );
+                      })()}
+                    </div>
                   </div>
                 </div>
               </div>
