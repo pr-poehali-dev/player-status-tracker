@@ -319,7 +319,7 @@ const Settings = () => {
                   <Input
                     id="minimumMonthlyNorm"
                     type="number"
-                    min="40"
+                    min="1"
                     max="300"
                     value={settings.minimumMonthlyNorm || 160}
                     onChange={(e) => setSettings({ ...settings, minimumMonthlyNorm: parseInt(e.target.value) || 160 })}
