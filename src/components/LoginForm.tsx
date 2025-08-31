@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
+import SecurityInfo from '@/components/SecurityInfo';
 import Icon from '@/components/ui/icon';
 
 const LoginForm = () => {
@@ -27,7 +28,7 @@ const LoginForm = () => {
 
     const success = await login(loginData, password);
     if (!success) {
-      setError('Неверный логин или пароль');
+      setError('Неверные данные для входа или слишком много попыток');
     }
     setIsLoading(false);
   };
@@ -78,12 +79,22 @@ const LoginForm = () => {
             </Button>
           </form>
           <div className="mt-6 text-sm text-gray-500 text-center">
-            <p>Данные по умолчанию:</p>
-            <p>Логин: <code className="bg-gray-100 px-1 rounded">admin</code></p>
-            <p>Пароль: <code className="bg-gray-100 px-1 rounded">admin123</code></p>
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <p className="font-medium text-blue-800 mb-2">Информация о безопасности:</p>
+              <div className="text-xs space-y-1">
+                <p>• Пароли зашифрованы SHA-256</p>
+                <p>• Ограничение попыток входа</p>
+                <p>• Защита от XSS атак</p>
+                <p>• Учетные данные получите у администратора</p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
+      
+      <div className="w-full max-w-4xl">
+        <SecurityInfo />
+      </div>
     </div>
   );
 };
