@@ -22,6 +22,16 @@ const AdminManagement = () => {
 
   useEffect(() => {
     loadUsers();
+    
+    // Setup cross-tab sync for real-time updates
+    const unsubscribe = storage.setupCrossTabSync((syncData) => {
+      const { type } = syncData;
+      if (type === 'users') {
+        loadUsers();
+      }
+    });
+
+    return unsubscribe;
   }, []);
 
   const loadUsers = () => {
@@ -38,20 +48,12 @@ const AdminManagement = () => {
     const targetUser = users.find(u => u.id === userId);
     if (!targetUser || !currentUser || currentUser.adminLevel < 9) return;
 
-    storage.updateUser(userId, { adminLevel: newLevel });
-
-    // Log the action
-    const action: SystemAction = {
-      id: Date.now().toString(),
-      adminId: currentUser.id,
-      action: 'Изменен уровень администратора',
-      target: targetUser.nickname,
-      timestamp: new Date().toISOString(),
-      details: `Новый уровень: ${newLevel} (был ${targetUser.adminLevel})`
-    };
-    storage.addAction(action);
-
-    loadUsers();
+    // Use syncAdminLevel for cross-device synchronization
+    const success = storage.syncAdminLevel(userId, newLevel, currentUser.id);
+    
+    if (success) {
+      loadUsers();
+    }
   };
 
   const handlePasswordReset = async (userId: string, newPassword: string) => {

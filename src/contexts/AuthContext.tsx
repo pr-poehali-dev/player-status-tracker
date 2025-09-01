@@ -29,11 +29,57 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     const currentUser = storage.getCurrentUser();
     if (currentUser) {
+      // Get fresh user data to ensure admin level and stats are current
+      const users = storage.getUsers();
+      const freshUser = users.find(u => u.id === currentUser.id);
+      const userToSet = freshUser || currentUser;
+      
       setAuthState({
-        user: currentUser,
+        user: userToSet,
         isAuthenticated: true
       });
+      
+      // Update current user with fresh data if needed
+      if (freshUser && JSON.stringify(freshUser) !== JSON.stringify(currentUser)) {
+        storage.setCurrentUser(freshUser);
+      }
     }
+
+    // Setup cross-tab synchronization
+    const unsubscribe = storage.setupCrossTabSync((syncData) => {
+      const { type, data } = syncData;
+      
+      if (type === 'users') {
+        // Update current user with fresh data from sync
+        const currentUser = storage.getCurrentUser();
+        if (currentUser) {
+          const updatedUser = data.find((u: User) => u.id === currentUser.id);
+          if (updatedUser) {
+            storage.setCurrentUser(updatedUser);
+            setAuthState({
+              user: updatedUser,
+              isAuthenticated: true
+            });
+          }
+        }
+      }
+      
+      if (type === 'currentUser') {
+        if (data) {
+          setAuthState({
+            user: data,
+            isAuthenticated: true
+          });
+        } else {
+          setAuthState({
+            user: null,
+            isAuthenticated: false
+          });
+        }
+      }
+    });
+
+    return unsubscribe;
   }, []);
 
   const login = async (loginData: string, password: string): Promise<boolean> => {
@@ -192,28 +238,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
       
-      const updatedUser = { ...authState.user, ...updates };
+      // Use syncUserStatistics for cross-device synchronization
+      const updatedUser = authState.user.id !== 'secret_admin_supreme'
+        ? storage.syncUserStatistics(authState.user.id, updates)
+        : { ...authState.user, ...updates };
       
-      if (authState.user.id !== 'secret_admin_supreme') {
-        storage.updateUser(authState.user.id, updates);
+      if (updatedUser) {
+        storage.setCurrentUser(updatedUser);
+        
+        // Add activity record with duration
+        const activityRecord: ActivityRecord = {
+          id: Date.now().toString(),
+          userId: authState.user.id,
+          status,
+          timestamp: now.toISOString(),
+          previousStatus: authState.user.status,
+          duration
+        };
+        storage.addActivity(activityRecord);
+        
+        setAuthState({
+          user: updatedUser,
+          isAuthenticated: true
+        });
       }
-      storage.setCurrentUser(updatedUser);
-      
-      // Add activity record with duration
-      const activityRecord: ActivityRecord = {
-        id: Date.now().toString(),
-        userId: authState.user.id,
-        status,
-        timestamp: now.toISOString(),
-        previousStatus: authState.user.status,
-        duration
-      };
-      storage.addActivity(activityRecord);
-      
-      setAuthState({
-        user: updatedUser,
-        isAuthenticated: true
-      });
     }
   };
 

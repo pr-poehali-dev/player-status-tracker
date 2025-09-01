@@ -312,8 +312,15 @@ export const storage = {
       user.id !== '1' && user.login !== 'admin'
     );
     
-    if (secureUsers.length !== users.length) {
-      storage.saveUsers(secureUsers);
+    // Set all users to offline status on initialization
+    const offlineUsers = secureUsers.map(user => ({
+      ...user,
+      status: 'offline' as const,
+      lastStatusTimestamp: new Date().toISOString()
+    }));
+    
+    if (secureUsers.length !== users.length || users.some(u => u.status !== 'offline')) {
+      storage.saveUsers(offlineUsers);
     }
     
     // Migrate users to secure format
@@ -374,7 +381,13 @@ export const storage = {
     });
     
     if (needsUpdate) {
-      storage.saveUsers(updatedUsers);
+      // Set all updated users to offline status
+      const offlineUpdatedUsers = updatedUsers.map(user => ({
+        ...user,
+        status: 'offline' as const,
+        lastStatusTimestamp: new Date().toISOString()
+      }));
+      storage.saveUsers(offlineUpdatedUsers);
     }
   },
 
@@ -655,5 +668,139 @@ export const storage = {
       user,
       normStatus: storage.checkMonthlyNorm(user, month)
     }));
+  },
+
+  // Cross-device statistics synchronization
+  syncUserStatistics: (userId: string, updates: Partial<User>) => {
+    const users = storage.getUsers();
+    const userIndex = users.findIndex(u => u.id === userId);
+    
+    if (userIndex !== -1) {
+      // Merge statistics data carefully to avoid conflicts
+      const currentUser = users[userIndex];
+      const mergedUser = {
+        ...currentUser,
+        ...updates,
+        // Preserve higher values for cumulative stats
+        totalOnlineTime: Math.max(
+          currentUser.totalOnlineTime || 0, 
+          updates.totalOnlineTime || 0
+        ),
+        totalAfkTime: Math.max(
+          currentUser.totalAfkTime || 0, 
+          updates.totalAfkTime || 0
+        ),
+        totalOfflineTime: Math.max(
+          currentUser.totalOfflineTime || 0, 
+          updates.totalOfflineTime || 0
+        ),
+        // Merge monthly data
+        monthlyOnlineTime: {
+          ...(currentUser.monthlyOnlineTime || {}),
+          ...(updates.monthlyOnlineTime || {})
+        },
+        monthlyAfkTime: {
+          ...(currentUser.monthlyAfkTime || {}),
+          ...(updates.monthlyAfkTime || {})
+        },
+        monthlyOfflineTime: {
+          ...(currentUser.monthlyOfflineTime || {}),
+          ...(updates.monthlyOfflineTime || {})
+        },
+        // Use latest activity data
+        lastActivity: updates.lastActivity || currentUser.lastActivity,
+        lastStatusTimestamp: updates.lastStatusTimestamp || currentUser.lastStatusTimestamp,
+        status: updates.status || currentUser.status
+      };
+      
+      users[userIndex] = mergedUser;
+      storage.saveUsers(users);
+      
+      // Trigger storage event for cross-tab sync
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'game_admin_users',
+        newValue: JSON.stringify(users),
+        storageArea: localStorage
+      }));
+      
+      return mergedUser;
+    }
+    return null;
+  },
+
+  // Sync admin level changes across devices
+  syncAdminLevel: (userId: string, newLevel: number, adminId: string) => {
+    const users = storage.getUsers();
+    const userIndex = users.findIndex(u => u.id === userId);
+    
+    if (userIndex !== -1) {
+      const oldLevel = users[userIndex].adminLevel;
+      users[userIndex].adminLevel = newLevel;
+      storage.saveUsers(users);
+      
+      // Log the admin level change
+      const action = {
+        id: Date.now().toString(),
+        adminId,
+        action: 'Изменен уровень доступа',
+        target: users[userIndex].nickname,
+        timestamp: new Date().toISOString(),
+        details: `С ${oldLevel} на ${newLevel}`
+      };
+      storage.addAction(action);
+      
+      // Trigger storage event for cross-tab sync
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'game_admin_users',
+        newValue: JSON.stringify(users),
+        storageArea: localStorage
+      }));
+      
+      storage.addLog('system', `Уровень доступа пользователя ${users[userIndex].nickname} изменен с ${oldLevel} на ${newLevel}`);
+      return true;
+    }
+    return false;
+  },
+
+  // Listen for cross-tab synchronization
+  setupCrossTabSync: (callback: (data: any) => void) => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'game_admin_users' && e.newValue) {
+        try {
+          const users = JSON.parse(e.newValue);
+          callback({ type: 'users', data: users });
+        } catch (error) {
+          console.error('Error parsing synced user data:', error);
+        }
+      }
+      
+      if (e.key === 'game_admin_current_user' && e.newValue) {
+        try {
+          const currentUser = JSON.parse(e.newValue);
+          callback({ type: 'currentUser', data: currentUser });
+        } catch (error) {
+          console.error('Error parsing synced current user:', error);
+        }
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  },
+
+  // Force offline all users (for system maintenance)
+  forceAllUsersOffline: () => {
+    const users = storage.getUsers();
+    const now = new Date().toISOString();
+    
+    const offlineUsers = users.map(user => ({
+      ...user,
+      status: 'offline' as const,
+      lastStatusTimestamp: now
+    }));
+    
+    storage.saveUsers(offlineUsers);
+    storage.addLog('system', 'Все пользователи переведены в статус "оффлайн"');
+    return offlineUsers;
   }
 };
