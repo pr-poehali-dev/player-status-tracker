@@ -305,6 +305,11 @@ export const storage = {
 
   // Initialize default data
   initialize: () => {
+    // Perform auto-sync on initialization
+    const syncResult = storage.performAutoSync();
+    if (syncResult.synced) {
+      console.log('Multi-device sync completed:', syncResult.summary);
+    }
     const users = storage.getUsers();
     
     // Remove old demo accounts and clear insecure data
@@ -634,6 +639,152 @@ export const storage = {
 
     } catch (error) {
       console.error('Error compressing storage:', error);
+    }
+  },
+
+  // Multi-device login synchronization - merges local data with existing users
+  syncMultiDeviceLogin: (localUsers: User[]): { syncedUsers: User[]; mergeSummary: string } => {
+    try {
+      const existingUsers = storage.getUsers();
+      const syncedUsers: User[] = [];
+      const mergeSummary: string[] = [];
+
+      // Create a map of existing users by login for fast lookup
+      const existingUsersMap = new Map<string, User>();
+      existingUsers.forEach(user => {
+        existingUsersMap.set(user.login, user);
+      });
+
+      // Process each local user
+      localUsers.forEach(localUser => {
+        const existingUser = existingUsersMap.get(localUser.login);
+        
+        if (existingUser) {
+          // Merge users - keep the most recent data and combine statistics
+          const mergedUser: User = {
+            ...existingUser,
+            // Keep most recent profile updates
+            nickname: localUser.lastActivity > existingUser.lastActivity ? localUser.nickname : existingUser.nickname,
+            avatar: localUser.lastActivity > existingUser.lastActivity ? localUser.avatar : existingUser.avatar,
+            // Merge total statistics (take maximum values)
+            totalOnlineTime: Math.max(localUser.totalOnlineTime || 0, existingUser.totalOnlineTime || 0),
+            totalGamesPlayed: Math.max(localUser.totalGamesPlayed || 0, existingUser.totalGamesPlayed || 0),
+            totalWins: Math.max(localUser.totalWins || 0, existingUser.totalWins || 0),
+            // Keep the highest admin level
+            adminLevel: Math.max(localUser.adminLevel || 0, existingUser.adminLevel || 0),
+            // Use most recent activity timestamp
+            lastActivity: Math.max(localUser.lastActivity, existingUser.lastActivity),
+            // Merge monthly statistics
+            monthlyOnlineTime: storage.mergeMonthlyStats(
+              existingUser.monthlyOnlineTime || {},
+              localUser.monthlyOnlineTime || {}
+            ),
+            monthlyGamesPlayed: storage.mergeMonthlyStats(
+              existingUser.monthlyGamesPlayed || {},
+              localUser.monthlyGamesPlayed || {}
+            ),
+            monthlyWins: storage.mergeMonthlyStats(
+              existingUser.monthlyWins || {},
+              localUser.monthlyWins || {}
+            ),
+            // Keep existing password if local user doesn't have one
+            passwordHash: localUser.passwordHash || existingUser.passwordHash
+          };
+          
+          syncedUsers.push(mergedUser);
+          mergeSummary.push(`${localUser.login}: объединены данные (${localUser.totalGamesPlayed || 0} + ${existingUser.totalGamesPlayed || 0} игр)`);
+        } else {
+          // New user from local storage
+          syncedUsers.push(localUser);
+          mergeSummary.push(`${localUser.login}: новый пользователь добавлен`);
+        }
+      });
+
+      // Add users that exist on server but not locally
+      existingUsers.forEach(existingUser => {
+        const hasLocalVersion = localUsers.find(local => local.login === existingUser.login);
+        if (!hasLocalVersion) {
+          syncedUsers.push(existingUser);
+        }
+      });
+
+      // Save the merged users
+      localStorage.setItem('users', JSON.stringify(syncedUsers));
+      
+      // Log the sync operation
+      const action = {
+        id: Date.now().toString(),
+        adminId: 'system',
+        action: 'Синхронизация между устройствами',
+        target: 'Все пользователи',
+        timestamp: new Date().toISOString(),
+        details: `Объединено ${localUsers.length} локальных и ${existingUsers.length} существующих пользователей`
+      };
+      storage.addAction(action);
+
+      return {
+        syncedUsers,
+        mergeSummary: mergeSummary.join('; ')
+      };
+    } catch (error) {
+      console.error('Error syncing multi-device login:', error);
+      return {
+        syncedUsers: storage.getUsers(),
+        mergeSummary: 'Ошибка синхронизации'
+      };
+    }
+  },
+
+  // Helper method to merge monthly statistics objects
+  mergeMonthlyStats: (stats1: { [key: string]: number }, stats2: { [key: string]: number }): { [key: string]: number } => {
+    const merged: { [key: string]: number } = { ...stats1 };
+    
+    Object.keys(stats2).forEach(month => {
+      merged[month] = Math.max(merged[month] || 0, stats2[month] || 0);
+    });
+    
+    return merged;
+  },
+
+  // Auto-sync on page load - checks for data from other devices
+  performAutoSync: (): { synced: boolean; summary: string } => {
+    try {
+      // Check if there are any backup/temp user data from other devices
+      const backupUsers = localStorage.getItem('users_backup');
+      const tempUsers = localStorage.getItem('users_temp');
+      
+      if (backupUsers || tempUsers) {
+        const localUsers = JSON.parse(backupUsers || tempUsers || '[]');
+        if (localUsers.length > 0) {
+          const syncResult = storage.syncMultiDeviceLogin(localUsers);
+          
+          // Clean up backup data after sync
+          localStorage.removeItem('users_backup');
+          localStorage.removeItem('users_temp');
+          
+          return {
+            synced: true,
+            summary: `Синхронизировано: ${syncResult.mergeSummary}`
+          };
+        }
+      }
+      
+      return { synced: false, summary: 'Нет данных для синхронизации' };
+    } catch (error) {
+      console.error('Auto-sync error:', error);
+      return { synced: false, summary: 'Ошибка автосинхронизации' };
+    }
+  },
+
+  // Create backup before major operations
+  createBackup: (suffix: string = ''): void => {
+    try {
+      const users = storage.getUsers();
+      const backupKey = `users_backup${suffix ? '_' + suffix : ''}`;
+      localStorage.setItem(backupKey, JSON.stringify(users));
+      localStorage.setItem(`${backupKey}_timestamp`, new Date().toISOString());
+    } catch (error) {
+      console.error('Error creating backup:', error);
     }
   },
 

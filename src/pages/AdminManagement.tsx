@@ -12,6 +12,7 @@ import { SecurityManager } from '@/lib/security';
 import { User, SystemAction } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import CreateUserForm from '@/components/CreateUserForm';
+import SyncStatus from '@/components/SyncStatus';
 import Icon from '@/components/ui/icon';
 
 const AdminManagement = () => {
@@ -347,6 +348,9 @@ const AdminManagement = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Sync Status */}
+      <SyncStatus />
 
       {/* Permission Levels Reference */}
       <Card>
