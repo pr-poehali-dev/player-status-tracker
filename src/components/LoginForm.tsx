@@ -31,9 +31,13 @@ const LoginForm = () => {
       return;
     }
 
-    const success = await login(loginData, password);
-    if (!success) {
-      setError('Неверные данные для входа или слишком много попыток');
+    try {
+      const success = await login(loginData, password);
+      if (!success) {
+        setError('Неверные данные для входа');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка при входе в систему');
     }
     setIsLoading(false);
   };
