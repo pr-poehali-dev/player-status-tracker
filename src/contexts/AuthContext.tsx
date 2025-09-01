@@ -64,20 +64,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
       
-      if (type === 'users' && authState.user) {
+      if (type === 'users') {
         // Update current user with fresh data from sync
-        const updatedUser = data.find((u: User) => u.id === authState.user?.id);
-        if (updatedUser) {
-          setAuthState({
-            user: updatedUser,
-            isAuthenticated: true
-          });
+        const currentUser = storage.getCurrentUser();
+        if (currentUser) {
+          const updatedUser = data.find((u: User) => u.id === currentUser.id);
+          if (updatedUser) {
+            setAuthState({
+              user: updatedUser,
+              isAuthenticated: true
+            });
+          }
         }
       }
     });
 
     return unsubscribe;
-  }, [authState.user]);
+  }, []);
 
   const login = async (loginData: string, password: string): Promise<boolean> => {
     try {
@@ -132,7 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     } catch (error) {
       console.error('Login error:', error);
-      throw error; // Re-throw to show specific error messages
+      return false;
     }
   };
 

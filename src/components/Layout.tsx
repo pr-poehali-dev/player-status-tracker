@@ -72,9 +72,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               key={item.path}
               to={item.path}
               onClick={() => setSidebarOpen(false)}
-              className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+              className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 location.pathname === item.path
-                  ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700'
+                  ? 'bg-blue-50 text-blue-700'
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }`}
             >
@@ -92,15 +92,10 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 {(['online', 'afk', 'offline'] as const).map((status) => (
                   <button
                     key={status}
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      updateStatus(status);
-                    }}
-                    className={`w-3 h-3 rounded-full border-2 transition-all cursor-pointer hover:scale-110 ${
+                    onClick={() => updateStatus(status)}
+                    className={`w-3 h-3 rounded-full border-2 transition-all ${
                       user?.status === status 
-                        ? `${getStatusColor(status)} border-white shadow-md` 
+                        ? `${getStatusColor(status)} border-white` 
                         : 'bg-gray-200 border-gray-300 hover:border-gray-400'
                     }`}
                     title={status}
@@ -118,15 +113,10 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             </div>
             
             <Button 
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleLogout();
-              }} 
+              onClick={handleLogout} 
               variant="outline" 
               size="sm" 
-              className="w-full cursor-pointer"
+              className="w-full"
             >
               <Icon name="LogOut" size={16} className="mr-2" />
               Выйти

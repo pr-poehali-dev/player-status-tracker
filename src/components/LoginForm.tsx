@@ -31,13 +31,9 @@ const LoginForm = () => {
       return;
     }
 
-    try {
-      const success = await login(loginData, password);
-      if (!success) {
-        setError('Неверные данные для входа');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка при входе в систему');
+    const success = await login(loginData, password);
+    if (!success) {
+      setError('Неверные данные для входа');
     }
     setIsLoading(false);
   };
