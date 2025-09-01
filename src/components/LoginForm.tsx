@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { storage } from '@/lib/storage';
+import { cloudSync } from '@/lib/cloudSync';
 import SecurityInfo from '@/components/SecurityInfo';
 import RegisterForm from '@/components/RegisterForm';
 import UnblockUserForm from '@/components/UnblockUserForm';
@@ -31,10 +32,27 @@ const LoginForm = () => {
       return;
     }
 
-    const success = await login(loginData, password);
-    if (!success) {
-      setError('Неверные данные для входа');
+    try {
+      // Сначала пытаемся войти через облачную синхронизацию
+      const cloudResult = await cloudSync.loginUser(loginData, password);
+      
+      if (cloudResult.success && cloudResult.user) {
+        // Успешный вход через облако
+        const success = await login(loginData, password);
+        if (!success) {
+          setError('Ошибка синхронизации данных');
+        }
+      } else {
+        // Если не получилось через облако, пробуем старый способ
+        const success = await login(loginData, password);
+        if (!success) {
+          setError(cloudResult.error || 'Неверные данные для входа');
+        }
+      }
+    } catch (err) {
+      setError('Произошла ошибка при входе');
     }
+    
     setIsLoading(false);
   };
 

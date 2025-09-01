@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { storage } from '@/lib/storage';
+import { cloudSync } from '@/lib/cloudSync';
 import { SystemAction } from '@/types';
 import Icon from '@/components/ui/icon';
 
@@ -64,47 +65,41 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
     }
 
     try {
-      // Verify data integrity before registration
-      const integrity = storage.verifyDataIntegrity();
-      if (!integrity.valid) {
-        console.warn('Проблемы с целостностью данных:', integrity.issues);
-        // Try to restore from backup if needed
-        storage.restoreUsersFromBackup();
+      // Регистрируем пользователя через облачную синхронизацию
+      const result = await cloudSync.registerUser(
+        formData.login,
+        formData.password,
+        formData.email || undefined
+      );
+
+      if (result.success && result.user) {
+        // Обновляем информацию о пользователе
+        const updatedUser = {
+          ...result.user,
+          firstName: formData.nickname,
+          username: formData.login,
+          role: 'user' as const,
+          adminLevel: 1,
+        };
+        
+        storage.updateUser(result.user.id, updatedUser);
+
+        // Логируем действие
+        const action: SystemAction = {
+          id: 'action_' + Date.now(),
+          type: 'user_registered',
+          timestamp: Date.now(),
+          performedBy: result.user.id,
+          details: `Пользователь ${formData.nickname} (${formData.login}) зарегистрирован`,
+          severity: 'info'
+        };
+        storage.logSystemAction(action);
+
+        // Переходим к форме входа
+        onSwitchToLogin();
+      } else {
+        setError(result.error || 'Ошибка при регистрации');
       }
-
-      // Create user with default admin level 1
-      const newUser = await storage.createSecureUser({
-        nickname: formData.nickname,
-        login: formData.login,
-        password: formData.password,
-        adminLevel: 1, // Default level for self-registered users
-        monthlyNorm: 160, // Default 160 hours per month
-        email: formData.email || undefined,
-        status: 'offline',
-        createdAt: new Date().toISOString(),
-        lastActivity: new Date().toISOString(),
-        totalOnlineTime: 0,
-        totalAfkTime: 0,
-        totalOfflineTime: 0,
-        monthlyOnlineTime: {},
-        monthlyAfkTime: {},
-        monthlyOfflineTime: {},
-        lastStatusTimestamp: new Date().toISOString()
-      });
-
-      // Log the action
-      const action: SystemAction = {
-        id: Date.now().toString(),
-        adminId: 'system',
-        action: 'Самостоятельная регистрация пользователя',
-        target: newUser.nickname,
-        timestamp: new Date().toISOString(),
-        details: `Логин: ${newUser.login}, Email: ${formData.email || 'не указан'}`
-      };
-      storage.addAction(action);
-
-      // Switch to login form
-      onSwitchToLogin();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка при регистрации');
     }

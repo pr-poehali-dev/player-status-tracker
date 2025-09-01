@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { storage } from '@/lib/storage';
+import { cloudSync } from '@/lib/cloudSync';
 import { useAuth } from '@/contexts/AuthContext';
 import Icon from '@/components/ui/icon';
 
@@ -12,6 +13,9 @@ interface SyncData {
   deviceCount: number;
   mergedUsers: number;
   hasBackup: boolean;
+  cloudUsers: number;
+  deviceId: string;
+  syncInProgress: boolean;
 }
 
 const SyncStatus = () => {
@@ -29,12 +33,16 @@ const SyncStatus = () => {
       const users = storage.getUsers();
       const backupTimestamp = localStorage.getItem('users_backup_timestamp');
       const hasBackup = !!localStorage.getItem('users_backup');
+      const cloudStatus = cloudSync.getSyncStatus();
       
       setSyncData({
-        lastSync: backupTimestamp || new Date().toISOString(),
-        deviceCount: 1, // Could be enhanced to track actual device count
+        lastSync: cloudStatus.lastSync ? new Date(cloudStatus.lastSync).toISOString() : (backupTimestamp || new Date().toISOString()),
+        deviceCount: 1,
         mergedUsers: users.length,
-        hasBackup
+        hasBackup,
+        cloudUsers: cloudStatus.cloudUsers,
+        deviceId: cloudStatus.deviceId,
+        syncInProgress: cloudStatus.syncInProgress
       });
     } catch (error) {
       console.error('Error loading sync data:', error);
@@ -46,22 +54,9 @@ const SyncStatus = () => {
     
     setIsLoading(true);
     try {
-      // Check for any backup data and sync
-      const backupUsers = localStorage.getItem('users_backup');
-      const tempUsers = localStorage.getItem('users_temp');
-      
-      if (backupUsers || tempUsers) {
-        const usersToSync = JSON.parse(backupUsers || tempUsers || '[]');
-        const syncResult = storage.syncMultiDeviceLogin(usersToSync);
-        
-        setLastSyncMessage(`Синхронизировано: ${syncResult.mergeSummary}`);
-        
-        // Clean up after sync
-        localStorage.removeItem('users_backup');
-        localStorage.removeItem('users_temp');
-      } else {
-        setLastSyncMessage('Нет данных для синхронизации');
-      }
+      // Полная синхронизация через облачную систему
+      await cloudSync.syncAllUsers();
+      setLastSyncMessage('Облачная синхронизация завершена успешно');
       
       loadSyncData();
     } catch (error) {
@@ -132,10 +127,14 @@ const SyncStatus = () => {
       </CardHeader>
       <CardContent className="space-y-4">
         {syncData && (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <div className="text-sm text-muted-foreground">Пользователей</div>
+              <div className="text-sm text-muted-foreground">Локальных</div>
               <div className="text-2xl font-bold">{syncData.mergedUsers}</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Облачных</div>
+              <div className="text-2xl font-bold">{syncData.cloudUsers}</div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Резервная копия</div>
@@ -143,6 +142,19 @@ const SyncStatus = () => {
                 {syncData.hasBackup ? "Есть" : "Нет"}
               </Badge>
             </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Синхронизация</div>
+              <Badge variant={syncData.syncInProgress ? "destructive" : "default"}>
+                {syncData.syncInProgress ? "Идёт" : "Готово"}
+              </Badge>
+            </div>
+          </div>
+        )}
+
+        {syncData && (
+          <div className="p-3 bg-muted/50 rounded-lg">
+            <div className="text-sm font-medium mb-1">ID устройства:</div>
+            <div className="text-xs font-mono text-muted-foreground">{syncData.deviceId}</div>
           </div>
         )}
 
@@ -184,9 +196,10 @@ const SyncStatus = () => {
         </div>
 
         <div className="text-sm text-muted-foreground">
-          <p>• Автоматическая синхронизация при входе с нового устройства</p>
-          <p>• Объединение статистики и сохранение максимальных значений</p>
-          <p>• Мгновенная синхронизация админ-прав между устройствами</p>
+          <p>• Автоматическая синхронизация при входе с разных устройств</p>
+          <p>• Обновление статусов и активности в реальном времени</p>
+          <p>• Облачное хранение с защищёнными паролями (SHA-256)</p>
+          <p>• Синхронизация админ-прав и статистики между устройствами</p>
         </div>
       </CardContent>
     </Card>

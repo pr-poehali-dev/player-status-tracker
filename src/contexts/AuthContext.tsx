@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthState, ActivityRecord } from '@/types';
 import { storage } from '@/lib/storage';
+import { cloudSync } from '@/lib/cloudSync';
 
 interface AuthContextType extends AuthState {
   login: (loginData: string, password: string) => Promise<boolean>;
@@ -25,25 +26,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   useEffect(() => {
-    storage.initialize();
-    
-    const currentUser = storage.getCurrentUser();
-    if (currentUser) {
-      // Get fresh user data to ensure admin level and stats are current
-      const users = storage.getUsers();
-      const freshUser = users.find(u => u.id === currentUser.id);
-      const userToSet = freshUser || currentUser;
+    const initializeAuth = async () => {
+      storage.initialize();
       
-      setAuthState({
-        user: userToSet,
-        isAuthenticated: true
-      });
+      // Запускаем автоматическую синхронизацию активности
+      cloudSync.startActivitySync();
       
-      // Update current user with fresh data if needed
-      if (freshUser && JSON.stringify(freshUser) !== JSON.stringify(currentUser)) {
-        storage.setCurrentUser(freshUser);
+      const currentUser = storage.getCurrentUser();
+      if (currentUser) {
+        // Полная синхронизация пользователей при загрузке
+        await cloudSync.syncAllUsers();
+        
+        // Get fresh user data to ensure admin level and stats are current
+        const users = storage.getUsers();
+        const freshUser = users.find(u => u.id === currentUser.id);
+        const userToSet = freshUser || currentUser;
+        
+        setAuthState({
+          user: userToSet,
+          isAuthenticated: true
+        });
+        
+        // Update current user with fresh data if needed
+        if (freshUser && JSON.stringify(freshUser) !== JSON.stringify(currentUser)) {
+          storage.setCurrentUser(freshUser);
+        }
       }
-    }
+    };
+
+    initializeAuth();
 
     // Setup cross-tab synchronization
     const unsubscribe = storage.setupCrossTabSync((syncData) => {
@@ -164,8 +175,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
     if (authState.user) {
+      // Выход через облачную синхронизацию
+      await cloudSync.logoutUser(authState.user.id);
+      
       const now = new Date();
       const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
       
