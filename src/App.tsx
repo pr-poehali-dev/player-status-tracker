@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -30,6 +29,24 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   return isAuthenticated ? <Navigate to="/dashboard" /> : <>{children}</>;
 };
 
+const AppRoutes = () => {
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/dashboard" />} />
+      <Route path="/login" element={<PublicRoute><LoginForm /></PublicRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/players" element={<ProtectedRoute><Players /></ProtectedRoute>} />
+      <Route path="/players/:userId" element={<ProtectedRoute><PlayerStatistics /></ProtectedRoute>} />
+      <Route path="/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
+      <Route path="/my-statistics" element={<ProtectedRoute><MyStatistics /></ProtectedRoute>} />
+      <Route path="/admin-management" element={<ProtectedRoute><AdminManagement /></ProtectedRoute>} />
+      <Route path="/system-logs" element={<ProtectedRoute><SystemLogs /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -38,20 +55,7 @@ const App = () => (
       <SiteStatusGuard>
         <BrowserRouter>
           <AuthProvider>
-            <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" />} />
-              <Route path="/login" element={<PublicRoute><LoginForm /></PublicRoute>} />
-              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/players" element={<ProtectedRoute><Players /></ProtectedRoute>} />
-              <Route path="/players/:userId" element={<ProtectedRoute><PlayerStatistics /></ProtectedRoute>} />
-              <Route path="/statistics" element={<ProtectedRoute><Statistics /></ProtectedRoute>} />
-              <Route path="/my-statistics" element={<ProtectedRoute><MyStatistics /></ProtectedRoute>} />
-              <Route path="/admin-management" element={<ProtectedRoute><AdminManagement /></ProtectedRoute>} />
-              <Route path="/system-logs" element={<ProtectedRoute><SystemLogs /></ProtectedRoute>} />
-              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <AppRoutes />
           </AuthProvider>
         </BrowserRouter>
       </SiteStatusGuard>

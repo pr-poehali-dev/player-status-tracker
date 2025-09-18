@@ -73,25 +73,7 @@ const Players = () => {
     setFilteredPlayers(filtered);
   }, [searchTerm, players]);
 
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      online: 'bg-green-100 text-green-800',
-      afk: 'bg-yellow-100 text-yellow-800',
-      offline: 'bg-gray-100 text-gray-800'
-    };
-    
-    const labels = {
-      online: 'Онлайн',
-      afk: 'АФК',
-      offline: 'Не в сети'
-    };
 
-    return (
-      <Badge className={variants[status as keyof typeof variants]}>
-        {labels[status as keyof typeof labels]}
-      </Badge>
-    );
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString('ru-RU');
@@ -134,41 +116,7 @@ const Players = () => {
     }
   };
 
-  const handleStatusChange = (playerId: string, newStatus: 'online' | 'afk' | 'offline') => {
-    if (!canManageUsers && currentUser?.id !== playerId) return;
 
-    const updatedPlayers = players.map(player => 
-      player.id === playerId 
-        ? { ...player, status: newStatus, lastActivity: new Date().toISOString() }
-        : player
-    );
-    
-    setPlayers(updatedPlayers);
-    storage.updateUser(playerId, { status: newStatus, lastActivity: new Date().toISOString() });
-
-    // Add activity record
-    const activityRecord: ActivityRecord = {
-      id: Date.now().toString(),
-      userId: playerId,
-      status: newStatus,
-      timestamp: new Date().toISOString()
-    };
-    storage.addActivity(activityRecord);
-
-    // Log the action if changed by admin
-    if (currentUser?.id !== playerId) {
-      const targetPlayer = players.find(p => p.id === playerId);
-      const action: SystemAction = {
-        id: Date.now().toString(),
-        adminId: currentUser?.id || '',
-        action: 'Изменен статус пользователя',
-        target: targetPlayer?.nickname || '',
-        timestamp: new Date().toISOString(),
-        details: `Новый статус: ${newStatus}`
-      };
-      storage.addAction(action);
-    }
-  };
 
   const handleDeletePlayer = (playerId: string) => {
     const playerToDelete = players.find(p => p.id === playerId);
@@ -333,7 +281,12 @@ const Players = () => {
                 </div>
 
                 <div className="flex items-center space-x-3">
-                  {getStatusBadge(player.status)}
+                  <StatusBadge 
+                    userId={player.id} 
+                    initialStatus={player.status} 
+                    onStatusChange={setPlayers}
+                    canEdit={canManageUsers || currentUser?.id === player.id}
+                  />
                   
                   <Link to={`/players/${player.id}`}>
                     <Button size="sm" variant="outline">
@@ -342,22 +295,7 @@ const Players = () => {
                     </Button>
                   </Link>
                   
-                  {(canManageUsers || currentUser?.id === player.id) && (
-                    <div className="flex space-x-1">
-                      {(['online', 'afk', 'offline'] as const).map((status) => (
-                        <Button
-                          key={status}
-                          size="sm"
-                          variant={player.status === status ? "default" : "outline"}
-                          onClick={() => handleStatusChange(player.id, status)}
-                          disabled={!canManageUsers && currentUser?.id !== player.id}
-                          className="h-8 px-2"
-                        >
-                          {status === 'online' ? 'Онлайн' : status === 'afk' ? 'АФК' : 'Офлайн'}
-                        </Button>
-                      ))}
-                    </div>
-                  )}
+
 
                   {canManageUsers && player.id !== currentUser?.id && (
                     <Button
