@@ -11,8 +11,14 @@ const STORAGE_KEYS = {
 };
 
 export const storage = {
-  // Users management - hybrid approach (database first, localStorage fallback)
-  getUsers: async (): Promise<User[]> => {
+  // Users management - sync by default for compatibility
+  getUsers: (): User[] => {
+    const data = localStorage.getItem(STORAGE_KEYS.USERS);
+    return data ? JSON.parse(data) : [];
+  },
+
+  // Async version for database operations
+  getUsersAsync: async (): Promise<User[]> => {
     try {
       // Try to get users from database first
       return await dbStorage.getUsers();
@@ -305,7 +311,7 @@ export const storage = {
     const issues: string[] = [];
     
     try {
-      const users = storage.getUsers();
+      const users = storage.getUsersSync();
       
       if (!Array.isArray(users)) {
         issues.push('Данные пользователей повреждены');
@@ -349,7 +355,7 @@ export const storage = {
     if (syncResult.synced) {
       console.log('Multi-device sync completed:', syncResult.summary);
     }
-    const users = storage.getUsers();
+    const users = storage.getUsersSync();
     
     // Remove old demo accounts and clear insecure data
     const secureUsers = users.filter(user => 
@@ -368,7 +374,7 @@ export const storage = {
     }
     
     // Migrate users to secure format
-    const existingUsers = storage.getUsers();
+    const existingUsers = storage.getUsersSync();
     let needsUpdate = false;
     const updatedUsers = existingUsers.map(user => {
       let updated = { ...user };

@@ -104,32 +104,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return false;
         }
         
-        // Check for multi-device sync opportunities on login
-        const currentUsers = storage.getUsers();
-        const backupUsers = localStorage.getItem('users_backup_pre_login');
-        
-        if (backupUsers) {
-          const parsedBackup = JSON.parse(backupUsers);
-          // If user counts differ or this is a different device, sync data
-          if (parsedBackup.length !== currentUsers.length || 
-              !parsedBackup.find((u: User) => u.login === loginData)) {
-            const syncResult = storage.syncMultiDeviceLogin(parsedBackup);
-            console.log('Login sync completed:', syncResult.mergeSummary);
-            
-            // Get updated user after sync
-            const syncedUsers = storage.getUsers();
-            const syncedUser = syncedUsers.find(u => u.login === loginData);
-            if (syncedUser) {
-              const updatedUser = { ...syncedUser, status: 'online' as const };
-              storage.setCurrentUser(updatedUser);
-              setAuthState({
-                user: updatedUser,
-                isAuthenticated: true
-              });
-              return true;
-            }
-          }
-        }
+        // For fallback auth, skip complex sync for now to avoid errors
+        // This will be handled properly when all users migrate to database
         
         const now = new Date().toISOString();
         const updatedUser = { 

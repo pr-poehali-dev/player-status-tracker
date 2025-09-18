@@ -27,14 +27,24 @@ const Players = () => {
   const { user: currentUser } = useAuth();
 
   useEffect(() => {
-    const loadPlayers = () => {
-      const allPlayers = storage.getUsers();
-      setPlayers(allPlayers);
-      setFilteredPlayers(allPlayers);
+    const loadPlayers = async () => {
+      try {
+        const allPlayers = await storage.getUsersAsync();
+        if (Array.isArray(allPlayers)) {
+          setPlayers(allPlayers);
+          setFilteredPlayers(allPlayers);
+        }
+      } catch (error) {
+        console.error('Error loading players:', error);
+        // Fallback to sync version
+        const allPlayers = storage.getUsersSync();
+        setPlayers(allPlayers);
+        setFilteredPlayers(allPlayers);
+      }
     };
 
     loadPlayers();
-    const interval = setInterval(loadPlayers, 5000);
+    const interval = setInterval(loadPlayers, 10000);
     return () => clearInterval(interval);
   }, []);
 

@@ -40,7 +40,7 @@ const AdminManagement = () => {
 
   const loadUsers = async () => {
     try {
-      const allUsers = await storage.getUsers();
+      const allUsers = await storage.getUsersAsync();
       setUsers(allUsers);
     } catch (error) {
       console.error('Error loading users:', error);
@@ -77,15 +77,19 @@ const AdminManagement = () => {
     user.login.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleAdminLevelChange = (userId: string, newLevel: number) => {
+  const handleAdminLevelChange = async (userId: string, newLevel: number) => {
     const targetUser = users.find(u => u.id === userId);
     if (!targetUser || !currentUser || currentUser.adminLevel < 9) return;
 
-    // Use syncAdminLevel for cross-device synchronization
-    const success = storage.syncAdminLevel(userId, newLevel, currentUser.id);
-    
-    if (success) {
-      loadUsers();
+    try {
+      // Use syncAdminLevel for cross-device synchronization
+      const success = storage.syncAdminLevel(userId, newLevel, currentUser.id);
+      
+      if (success) {
+        await loadUsers();
+      }
+    } catch (error) {
+      console.error('Error changing admin level:', error);
     }
   };
 
@@ -109,7 +113,7 @@ const AdminManagement = () => {
       };
       storage.addAction(action);
 
-      loadUsers();
+      await loadUsers();
       setSelectedUser(null);
     } catch (error) {
       console.error('Error resetting password:', error);

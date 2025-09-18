@@ -19,38 +19,71 @@ const Dashboard = () => {
   const [recentUsers, setRecentUsers] = useState<User[]>([]);
 
   useEffect(() => {
-    const loadData = () => {
-      const users = storage.getUsers();
-      const activity = storage.getActivity();
-      
-      // Calculate statistics
-      const onlineUsers = users.filter(u => u.status === 'online').length;
-      const afkUsers = users.filter(u => u.status === 'afk').length;
-      const offlineUsers = users.filter(u => u.status === 'offline').length;
+    const loadData = async () => {
+      try {
+        const users = await storage.getUsersAsync();
+        const activity = storage.getActivity();
+        
+        if (!Array.isArray(users)) {
+          console.error('Users data is not an array:', users);
+          return;
+        }
+        
+        // Calculate statistics
+        const onlineUsers = users.filter(u => u.status === 'online').length;
+        const afkUsers = users.filter(u => u.status === 'afk').length;
+        const offlineUsers = users.filter(u => u.status === 'offline').length;
 
-      // Calculate activity durations
-      const activityStats = activity.reduce((acc, record) => {
-        acc[record.status] = (acc[record.status] || 0) + (record.duration || 1);
-        return acc;
-      }, { online: 0, afk: 0, offline: 0 });
+        // Calculate activity durations
+        const activityStats = activity.reduce((acc, record) => {
+          acc[record.status] = (acc[record.status] || 0) + (record.duration || 1);
+          return acc;
+        }, { online: 0, afk: 0, offline: 0 });
 
-      setStats({
-        totalUsers: users.length,
-        onlineUsers,
-        afkUsers,
-        offlineUsers,
-        totalActivity: activityStats
-      });
+        setStats({
+          totalUsers: users.length,
+          onlineUsers,
+          afkUsers,
+          offlineUsers,
+          totalActivity: activityStats
+        });
 
-      // Get recent users (last 5 active)
-      const sortedUsers = users
-        .sort((a, b) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime())
-        .slice(0, 5);
-      setRecentUsers(sortedUsers);
+        // Get recent users (last 5 active)
+        const sortedUsers = users
+          .sort((a, b) => new Date(b.lastActivity || '').getTime() - new Date(a.lastActivity || '').getTime())
+          .slice(0, 5);
+        setRecentUsers(sortedUsers);
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        // Fallback to sync version
+        try {
+          const users = storage.getUsersSync();
+          if (Array.isArray(users)) {
+            const onlineUsers = users.filter(u => u.status === 'online').length;
+            const afkUsers = users.filter(u => u.status === 'afk').length;
+            const offlineUsers = users.filter(u => u.status === 'offline').length;
+            
+            setStats({
+              totalUsers: users.length,
+              onlineUsers,
+              afkUsers,
+              offlineUsers,
+              totalActivity: { online: 0, afk: 0, offline: 0 }
+            });
+            
+            const sortedUsers = users
+              .sort((a, b) => new Date(b.lastActivity || '').getTime() - new Date(a.lastActivity || '').getTime())
+              .slice(0, 5);
+            setRecentUsers(sortedUsers);
+          }
+        } catch (fallbackError) {
+          console.error('Fallback also failed:', fallbackError);
+        }
+      }
     };
 
     loadData();
-    const interval = setInterval(loadData, 5000); // Update every 5 seconds
+    const interval = setInterval(loadData, 10000); // Update every 10 seconds
     return () => clearInterval(interval);
   }, []);
 
