@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthState, ActivityRecord } from '@/types';
 import { storage } from '@/lib/storage';
 import { authService } from '@/lib/authService';
-import { realtimeSync } from '@/lib/realtimeSync';
 
 interface AuthContextType extends AuthState {
   login: (loginData: string, password: string) => Promise<boolean>;
@@ -35,26 +34,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setAuthState({
           user: currentUser,
           isAuthenticated: true
-        });
-        
-        // Запустить реальное время синхронизации
-        realtimeSync.start();
-        
-        // Подписаться на обновления
-        realtimeSync.subscribe('current_user_updated', (updatedUser: User) => {
-          setAuthState({
-            user: updatedUser,
-            isAuthenticated: true
-          });
-        });
-        
-        realtimeSync.subscribe('activity_updated', (updatedUser: User) => {
-          if (updatedUser.id === currentUser.id) {
-            setAuthState({
-              user: updatedUser,
-              isAuthenticated: true
-            });
-          }
         });
       }
     };
@@ -111,9 +90,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           user: user,
           isAuthenticated: true
         });
-        
-        // Запустить реальное время синхронизации после входа
-        realtimeSync.start();
         
         return true;
       }
@@ -228,9 +204,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
       storage.addActivity(activityRecord);
     }
-    
-    // Остановить синхронизацию
-    realtimeSync.stop();
     
     storage.setCurrentUser(null);
     setAuthState({
