@@ -21,6 +21,7 @@ const LoginForm = () => {
   const [showRegister, setShowRegister] = useState(false);
   const [showUnblock, setShowUnblock] = useState(false);
   const [showSuperAdminInfo, setShowSuperAdminInfo] = useState(false);
+  const [systemSettings, setSystemSettings] = useState<any>(null);
   const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,6 +49,31 @@ const LoginForm = () => {
   };
 
   const settings = storage.getSettings();
+
+  useEffect(() => {
+    // Загрузить настройки системы
+    const loadSystemSettings = async () => {
+      try {
+        const response = await fetch('https://functions.poehali.dev/d14b7b48-de26-44c9-856c-9b30734eaeef', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (response.ok) {
+          const settingsData = await response.json();
+          setSystemSettings(settingsData);
+        }
+      } catch (error) {
+        console.error('Error loading system settings:', error);
+        // Fallback to localStorage settings
+        setSystemSettings(settings);
+      }
+    };
+    
+    loadSystemSettings();
+  }, [settings]);
 
   if (showRegister) {
     return (
@@ -148,7 +174,7 @@ const LoginForm = () => {
             </Button>
           </form>
 
-          {settings.isRegistrationOpen && (
+          {(systemSettings?.isRegistrationOpen || settings.isRegistrationOpen) && (
             <div className="mt-6 space-y-4">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
@@ -200,7 +226,7 @@ const LoginForm = () => {
                     <p>• Пароли зашифрованы SHA-256</p>
                     <p>• Ограничение попыток входа</p>
                     <p>• Защита от XSS атак</p>
-                    <p>• {settings.isRegistrationOpen ? 'Доступна самостоятельная регистрация' : 'Учетные данные получите у администратора'}</p>
+                    <p>• {(systemSettings?.isRegistrationOpen || settings.isRegistrationOpen) ? 'Доступна самостоятельная регистрация' : 'Учетные данные получите у администратора'}</p>
                   </div>
                 </div>
               </div>

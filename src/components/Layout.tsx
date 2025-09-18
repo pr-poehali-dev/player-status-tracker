@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import StatusBadge from '@/components/StatusBadge';
 import Icon from '@/components/ui/icon';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -88,24 +89,27 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-500">Статус:</span>
-              <div className="flex space-x-1">
-                {(['online', 'afk', 'offline'] as const).map((status) => (
-                  <button
-                    key={status}
-                    onClick={() => updateStatus(status)}
-                    className={`w-3 h-3 rounded-full border-2 transition-all ${
-                      user?.status === status 
-                        ? `${getStatusColor(status)} border-white` 
-                        : 'bg-gray-200 border-gray-300 hover:border-gray-400'
-                    }`}
-                    title={status}
-                  />
-                ))}
-              </div>
+              {user && (
+                <StatusBadge 
+                  status={user.status as 'online' | 'afk' | 'offline'} 
+                  userId={user.id}
+                  nickname={user.nickname}
+                  clickable={true}
+                  showIcon={true}
+                />
+              )}
             </div>
             
             <div className="flex items-center space-x-3">
-              <div className={`w-2 h-2 rounded-full ${getStatusColor(user?.status || 'offline')}`} />
+              {user && (
+                <StatusBadge 
+                  status={user.status as 'online' | 'afk' | 'offline'} 
+                  userId={user.id}
+                  nickname={user.nickname}
+                  clickable={false}
+                  showIcon={true}
+                />
+              )}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">{user?.nickname}</p>
                 <p className="text-xs text-gray-500">Уровень {user?.adminLevel}</p>

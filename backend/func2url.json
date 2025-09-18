@@ -1,4 +1,5 @@
 {
+  "sync": "https://functions.poehali.dev/6b10b18a-75a1-4298-b416-f630b077c61c",
   "auth": "https://functions.poehali.dev/0d0526fa-dd23-4e3e-b173-d74b5d3d14f1",
   "activate-registration": "https://functions.poehali.dev/1b850f5c-45f7-4740-be51-ce806bc60d2c",
   "settings": "https://functions.poehali.dev/4021c866-38e6-4c52-af21-d25772c683eb",

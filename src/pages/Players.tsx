@@ -9,6 +9,8 @@ import { Label } from '@/components/ui/label';
 import { storage } from '@/lib/storage';
 import { User, SystemAction, ActivityRecord } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { realtimeSync } from '@/lib/realtimeSync';
+import StatusBadge from '@/components/StatusBadge';
 import Icon from '@/components/ui/icon';
 import NormProgress from '@/components/ui/norm-progress';
 
@@ -44,8 +46,23 @@ const Players = () => {
     };
 
     loadPlayers();
-    const interval = setInterval(loadPlayers, 10000);
-    return () => clearInterval(interval);
+    
+    // Подписаться на обновления в реальном времени
+    realtimeSync.subscribe('users_updated', (updatedUsers: User[]) => {
+      if (Array.isArray(updatedUsers)) {
+        setPlayers(updatedUsers);
+        setFilteredPlayers(updatedUsers.filter(player => 
+          player.nickname.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          player.login.toLowerCase().includes(searchTerm.toLowerCase())
+        ));
+      }
+    });
+    
+    const interval = setInterval(loadPlayers, 30000); // Уменьшил частоту обновления
+    return () => {
+      clearInterval(interval);
+      realtimeSync.unsubscribe('users_updated');
+    };
   }, []);
 
   useEffect(() => {
