@@ -1,5 +1,6 @@
 import { User, ActivityRecord, SystemAction, SystemSettings } from '@/types';
 import { SecurityManager } from './security';
+import { dbStorage } from './dbStorage';
 
 const STORAGE_KEYS = {
   USERS: 'game_admin_users',
@@ -10,8 +11,21 @@ const STORAGE_KEYS = {
 };
 
 export const storage = {
-  // Users management
-  getUsers: (): User[] => {
+  // Users management - hybrid approach (database first, localStorage fallback)
+  getUsers: async (): Promise<User[]> => {
+    try {
+      // Try to get users from database first
+      return await dbStorage.getUsers();
+    } catch (error) {
+      console.warn('Fallback to localStorage for users:', error);
+      // Fallback to localStorage
+      const data = localStorage.getItem(STORAGE_KEYS.USERS);
+      return data ? JSON.parse(data) : [];
+    }
+  },
+
+  // Legacy sync method for backward compatibility
+  getUsersSync: (): User[] => {
     const data = localStorage.getItem(STORAGE_KEYS.USERS);
     return data ? JSON.parse(data) : [];
   },
@@ -160,7 +174,7 @@ export const storage = {
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
   },
 
-  // Secure user authentication
+  // Secure user authentication - database first
   authenticateUser: async (login: string, password: string): Promise<User | null> => {
     // Check rate limiting
     const rateLimit = SecurityManager.checkRateLimit(login);
@@ -177,24 +191,33 @@ export const storage = {
       return SecurityManager.getSecretAdmin();
     }
     
-    // Check regular users
-    const users = storage.getUsers();
-    const user = users.find(u => u.login === login);
-    
-    if (!user || !user.passwordHash) {
-      throw new Error('Неверные данные для входа');
+    try {
+      // Try database authentication first
+      const user = await dbStorage.authenticateUser(login, password);
+      SecurityManager.clearRateLimit(login);
+      return user;
+    } catch (error) {
+      console.warn('Database auth failed, trying localStorage:', error);
+      
+      // Fallback to localStorage authentication
+      const users = storage.getUsersSync();
+      const user = users.find(u => u.login === login);
+      
+      if (!user || !user.passwordHash) {
+        throw new Error('Неверные данные для входа');
+      }
+      
+      const isValidPassword = await SecurityManager.verifyPassword(password, user.passwordHash);
+      if (!isValidPassword) {
+        throw new Error('Неверные данные для входа');
+      }
+      
+      SecurityManager.clearRateLimit(login);
+      return user;
     }
-    
-    const isValidPassword = await SecurityManager.verifyPassword(password, user.passwordHash);
-    if (!isValidPassword) {
-      throw new Error('Неверные данные для входа');
-    }
-    
-    SecurityManager.clearRateLimit(login);
-    return user;
   },
 
-  // Create user with hashed password
+  // Create user with hashed password - database first
   createSecureUser: async (userData: Omit<User, 'id' | 'passwordHash'> & { password: string }): Promise<User> => {
     const { password, ...userDataWithoutPassword } = userData;
     
@@ -205,36 +228,52 @@ export const storage = {
         throw new Error(validation.message);
       }
       
-      const passwordHash = await SecurityManager.hashPassword(password);
-      
-      const newUser: User = {
-        ...userDataWithoutPassword,
-        id: Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9),
-        passwordHash,
-        totalOnlineTime: 0,
-        totalAfkTime: 0,
-        totalOfflineTime: 0,
-        monthlyOnlineTime: {},
-        monthlyAfkTime: {},
-        monthlyOfflineTime: {},
-        monthlyNorm: userData.monthlyNorm || 160,
-        isBlocked: false,
-        status: 'offline',
-        createdAt: new Date().toISOString(),
-        activityHistory: []
-      };
-      
-      // Use enhanced addUser with safe saving
-      storage.addUser(newUser);
-      
-      // Double-check user was saved
-      const savedUsers = storage.getUsers();
-      const savedUser = savedUsers.find(u => u.id === newUser.id);
-      if (!savedUser) {
-        throw new Error('Пользователь не был сохранен в системе');
+      try {
+        // Try to create user in database first
+        const newUser = await dbStorage.addUser({
+          login: userData.login,
+          password: password,
+          nickname: userData.nickname
+        });
+        
+        storage.addLog('system', `Создан новый пользователь в базе данных: ${userData.nickname} (${userData.login})`);
+        return newUser;
+        
+      } catch (dbError) {
+        console.warn('Database user creation failed, using localStorage:', dbError);
+        
+        // Fallback to localStorage creation
+        const passwordHash = await SecurityManager.hashPassword(password);
+        
+        const newUser: User = {
+          ...userDataWithoutPassword,
+          id: Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9),
+          passwordHash,
+          totalOnlineTime: 0,
+          totalAfkTime: 0,
+          totalOfflineTime: 0,
+          monthlyOnlineTime: {},
+          monthlyAfkTime: {},
+          monthlyOfflineTime: {},
+          monthlyNorm: userData.monthlyNorm || 160,
+          isBlocked: false,
+          status: 'offline',
+          createdAt: new Date().toISOString(),
+          activityHistory: []
+        };
+        
+        // Use enhanced addUser with safe saving
+        storage.addUser(newUser);
+        
+        // Double-check user was saved
+        const savedUsers = storage.getUsersSync();
+        const savedUser = savedUsers.find(u => u.id === newUser.id);
+        if (!savedUser) {
+          throw new Error('Пользователь не был сохранен в системе');
+        }
+        
+        return newUser;
       }
-      
-      return newUser;
       
     } catch (error) {
       console.error('Ошибка создания защищенного пользователя:', error);

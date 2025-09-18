@@ -1,0 +1,50 @@
+{
+  "tests": [
+    {
+      "name": "Get all users",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": [],
+      "bodyMatcher": "type"
+    },
+    {
+      "name": "Register new user",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "register",
+        "login": "testuser",
+        "password": "testpass123",
+        "nickname": "Test User"
+      },
+      "expectedStatus": 201,
+      "expectedBody": {
+        "id": "string",
+        "login": "testuser",
+        "nickname": "Test User",
+        "message": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Login user",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "login",
+        "login": "testuser",
+        "password": "testpass123"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "id": "string",
+        "login": "testuser",
+        "nickname": "Test User",
+        "adminLevel": 0,
+        "status": "online"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

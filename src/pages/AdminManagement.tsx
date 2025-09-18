@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { storage } from '@/lib/storage';
+import { dbStorage } from '@/lib/dbStorage';
 import { SecurityManager } from '@/lib/security';
 import { User, SystemAction } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,6 +20,8 @@ const AdminManagement = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [migrationStatus, setMigrationStatus] = useState<string>('');
+  const [isMigrating, setIsMigrating] = useState(false);
   const { user: currentUser } = useAuth();
 
   useEffect(() => {
@@ -35,9 +38,38 @@ const AdminManagement = () => {
     return unsubscribe;
   }, []);
 
-  const loadUsers = () => {
-    const allUsers = storage.getUsers();
-    setUsers(allUsers);
+  const loadUsers = async () => {
+    try {
+      const allUsers = await storage.getUsers();
+      setUsers(allUsers);
+    } catch (error) {
+      console.error('Error loading users:', error);
+      // Fallback to localStorage
+      const localUsers = storage.getUsersSync();
+      setUsers(localUsers);
+    }
+  };
+
+  const handleMigrateToDatabase = async () => {
+    if (!currentUser || currentUser.adminLevel < 9) return;
+    
+    setIsMigrating(true);
+    setMigrationStatus('Начинаю миграцию данных в базу данных...');
+    
+    try {
+      const result = await dbStorage.migrateToDatabase();
+      setMigrationStatus(result.message);
+      
+      if (result.success) {
+        // Refresh users list from database
+        await loadUsers();
+        storage.addLog('system', 'Успешная миграция данных в базу данных');
+      }
+    } catch (error) {
+      setMigrationStatus(`Ошибка миграции: ${error}`);
+    } finally {
+      setIsMigrating(false);
+    }
   };
 
   const filteredUsers = users.filter(user =>
@@ -348,6 +380,45 @@ const AdminManagement = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Database Migration */}
+      {currentUser?.adminLevel >= 9 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Миграция в базу данных</CardTitle>
+            <CardDescription>Перенос данных из localStorage в PostgreSQL базу данных</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button 
+              onClick={handleMigrateToDatabase}
+              disabled={isMigrating}
+              className="w-full"
+            >
+              <Icon name={isMigrating ? "Loader2" : "Database"} className="mr-2 h-4 w-4" />
+              {isMigrating ? 'Миграция...' : 'Мигрировать данные в базу данных'}
+            </Button>
+            
+            {migrationStatus && (
+              <Alert>
+                <Icon name="Info" className="h-4 w-4" />
+                <AlertDescription>
+                  {migrationStatus}
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            <div className="text-sm text-gray-600">
+              <p>Эта операция:</p>
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Перенесет всех пользователей из localStorage в PostgreSQL</li>
+                <li>Улучшит производительность и надежность</li>
+                <li>Обеспечит долгосрочное хранение данных</li>
+                <li>Безопасна - не удаляет существующие данные</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Sync Status */}
       <SyncStatus />
