@@ -1,0 +1,52 @@
+{
+  "tests": [
+    {
+      "name": "Get all users for sync",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "users": [],
+        "timestamp": "string",
+        "count": "number"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Update user status",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "update_status",
+        "user_id": "test_user_id",
+        "status": "online",
+        "previous_status": "offline",
+        "time_in_previous_status": 30000
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true,
+        "message": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Update user activity",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "update_activity",
+        "user_id": "test_user_id",
+        "total_online_time": 120000,
+        "total_afk_time": 30000,
+        "total_offline_time": 60000
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true,
+        "message": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
