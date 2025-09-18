@@ -1,0 +1,61 @@
+{
+  "tests": [
+    {
+      "name": "Get system info",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "system": {
+          "totalUsers": "number",
+          "onlineUsers": "number",
+          "registrationEnabled": "boolean"
+        }
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Register new user",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "register",
+        "login": "testuser123",
+        "password": "testpass123",
+        "nickname": "Test User 123"
+      },
+      "expectedStatus": 201,
+      "expectedBody": {
+        "success": true,
+        "message": "string",
+        "user": {
+          "id": "string",
+          "login": "testuser123",
+          "nickname": "Test User 123",
+          "adminLevel": 1
+        }
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Login user",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "login",
+        "login": "superadmin",
+        "password": "Admin2024!SuperSecure"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true,
+        "user": {
+          "login": "superadmin",
+          "nickname": "Супер Администратор",
+          "adminLevel": 10
+        }
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

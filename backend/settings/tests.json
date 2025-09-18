@@ -1,0 +1,30 @@
+{
+  "tests": [
+    {
+      "name": "Get system settings",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "id": "number",
+        "siteName": "string",
+        "isRegistrationOpen": "boolean",
+        "isSiteOpen": "boolean"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Update registration setting",
+      "method": "PUT",
+      "path": "/",
+      "body": {
+        "is_registration_open": true
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "isRegistrationOpen": true
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

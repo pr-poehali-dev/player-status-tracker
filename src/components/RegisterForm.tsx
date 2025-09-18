@@ -5,7 +5,6 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { storage } from '@/lib/storage';
-import { cloudSync } from '@/lib/cloudSync';
 import { SystemAction } from '@/types';
 import Icon from '@/components/ui/icon';
 

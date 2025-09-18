@@ -1,0 +1,14 @@
+{
+  "tests": [
+    {
+      "name": "Activate registration",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "message": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

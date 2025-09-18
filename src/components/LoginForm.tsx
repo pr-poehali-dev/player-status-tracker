@@ -6,10 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { storage } from '@/lib/storage';
-import { cloudSync } from '@/lib/cloudSync';
+// import { cloudSync } from '@/lib/cloudSync';
 import SecurityInfo from '@/components/SecurityInfo';
-import RegisterForm from '@/components/RegisterForm';
+import NewRegisterForm from '@/components/NewRegisterForm';
 import UnblockUserForm from '@/components/UnblockUserForm';
+import SuperAdminInfo from '@/components/SuperAdminInfo';
 import Icon from '@/components/ui/icon';
 
 const LoginForm = () => {
@@ -19,6 +20,7 @@ const LoginForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
   const [showUnblock, setShowUnblock] = useState(false);
+  const [showSuperAdminInfo, setShowSuperAdminInfo] = useState(false);
   const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,21 +35,10 @@ const LoginForm = () => {
     }
 
     try {
-      // Сначала пытаемся войти через облачную синхронизацию
-      const cloudResult = await cloudSync.loginUser(loginData, password);
-      
-      if (cloudResult.success && cloudResult.user) {
-        // Успешный вход через облако
-        const success = await login(loginData, password);
-        if (!success) {
-          setError('Ошибка синхронизации данных');
-        }
-      } else {
-        // Если не получилось через облако, пробуем старый способ
-        const success = await login(loginData, password);
-        if (!success) {
-          setError(cloudResult.error || 'Неверные данные для входа');
-        }
+      // Пытаемся войти через новый API
+      const success = await login(loginData, password);
+      if (!success) {
+        setError('Неверные данные для входа');
       }
     } catch (err) {
       setError('Произошла ошибка при входе');
@@ -61,13 +52,34 @@ const LoginForm = () => {
   if (showRegister) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <RegisterForm onSwitchToLogin={() => setShowRegister(false)} />
+        <NewRegisterForm 
+          onSuccess={(user) => console.log('Registered:', user)}
+          onSwitchToLogin={() => setShowRegister(false)} 
+        />
       </div>
     );
   }
 
   if (showUnblock) {
     return <UnblockUserForm onBack={() => setShowUnblock(false)} />;
+  }
+
+  if (showSuperAdminInfo) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="space-y-4">
+          <SuperAdminInfo />
+          <div className="text-center">
+            <Button
+              variant="outline"
+              onClick={() => setShowSuperAdminInfo(false)}
+            >
+              Вернуться к входу
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -164,6 +176,15 @@ const LoginForm = () => {
                 >
                   <Icon name="Unlock" className="mr-2 h-3 w-3" />
                   Разблокировать аккаунт
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowSuperAdminInfo(true)}
+                  className="w-full h-9 text-sm text-red-600 hover:text-red-800 hover:bg-red-50"
+                >
+                  <Icon name="Crown" className="mr-2 h-3 w-3" />
+                  Данные супер-админа
                 </Button>
               </div>
             </div>

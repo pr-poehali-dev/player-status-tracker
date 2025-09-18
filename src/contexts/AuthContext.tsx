@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthState, ActivityRecord } from '@/types';
 import { storage } from '@/lib/storage';
-import { cloudSync } from '@/lib/cloudSync';
+import { authService } from '@/lib/authService';
 
 interface AuthContextType extends AuthState {
   login: (loginData: string, password: string) => Promise<boolean>;
@@ -29,28 +29,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initializeAuth = async () => {
       storage.initialize();
       
-      // Запускаем автоматическую синхронизацию активности
-      cloudSync.startActivitySync();
-      
       const currentUser = storage.getCurrentUser();
       if (currentUser) {
-        // Полная синхронизация пользователей при загрузке
-        await cloudSync.syncAllUsers();
-        
-        // Get fresh user data to ensure admin level and stats are current
-        const users = storage.getUsers();
-        const freshUser = users.find(u => u.id === currentUser.id);
-        const userToSet = freshUser || currentUser;
-        
         setAuthState({
-          user: userToSet,
+          user: currentUser,
           isAuthenticated: true
         });
-        
-        // Update current user with fresh data if needed
-        if (freshUser && JSON.stringify(freshUser) !== JSON.stringify(currentUser)) {
-          storage.setCurrentUser(freshUser);
-        }
       }
     };
 
@@ -95,9 +79,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (loginData: string, password: string): Promise<boolean> => {
     try {
-      // Create backup of current users before login
-      storage.createBackup('pre_login');
+      // Try new database authentication first
+      const loginResult = await authService.login(loginData, password);
       
+      if (loginResult.success && loginResult.user) {
+        const user = loginResult.user;
+        
+        storage.setCurrentUser(user);
+        setAuthState({
+          user: user,
+          isAuthenticated: true
+        });
+        
+        return true;
+      }
+      
+      // Fallback to old localStorage authentication
+      storage.createBackup('pre_login');
       const user = await storage.authenticateUser(loginData, password);
       
       if (user) {
@@ -177,8 +175,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     if (authState.user) {
-      // Выход через облачную синхронизацию
-      await cloudSync.logoutUser(authState.user.id);
+      // Notify backend about logout
+      await authService.logout(authState.user.id);
       
       const now = new Date();
       const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
