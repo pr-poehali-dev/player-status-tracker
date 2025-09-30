@@ -138,7 +138,8 @@ class CloudSyncManager {
       
       cloudUser.lastActivity = Date.now();
       cloudUser.lastSeen = Date.now();
-      cloudUser.status = 'online';
+      // НЕ меняем статус при входе - сохраняем текущий статус пользователя
+      // cloudUser.status = 'online';
       cloudUser.isOnline = true;
       cloudUser.lastSyncTimestamp = Date.now();
       cloudUser.syncVersion += 1;
@@ -284,7 +285,8 @@ class CloudSyncManager {
       
       cloudUser.lastActivity = now;
       cloudUser.lastSeen = now;
-      cloudUser.status = isActive ? 'online' : 'away';
+      // НЕ меняем статус автоматически - пользователь или админ управляют статусом вручную
+      // cloudUser.status = isActive ? 'online' : 'away';
       cloudUser.isOnline = isActive;
       cloudUser.lastSyncTimestamp = now;
       

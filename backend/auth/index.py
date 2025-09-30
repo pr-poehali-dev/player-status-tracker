@@ -237,10 +237,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                                 'body': json.dumps({'error': 'Неверные данные для входа'})
                             }
                         
-                        # Обновить статус на онлайн и время последней активности
+                        # Обновить только время последней активности (статус не меняем!)
                         cur.execute("""
-                            UPDATE users SET status = 'online', last_activity = CURRENT_TIMESTAMP,
-                                           last_status_timestamp = CURRENT_TIMESTAMP
+                            UPDATE users SET last_activity = CURRENT_TIMESTAMP
                             WHERE id = %s
                         """, (user[0],))
                         
