@@ -2,30 +2,40 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import StatusBadge from '@/components/StatusBadge';
+import StatusSelector from '@/components/StatusSelector';
 import Icon from '@/components/ui/icon';
-import { realtimeSync } from '@/lib/realtimeSync';
+import { storage } from '@/lib/storage';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, logout, updateStatus } = useAuth();
+  const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [, setUpdateTrigger] = useState(0);
+  const [currentStatus, setCurrentStatus] = useState<'online' | 'afk' | 'offline'>(user?.status || 'offline');
 
   useEffect(() => {
-    const handleStatusUpdate = () => {
-      setUpdateTrigger(prev => prev + 1);
+    if (user) {
+      setCurrentStatus(user.status as 'online' | 'afk' | 'offline');
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const handleStatusChange = (event: any) => {
+      if (user && event.detail.userId === user.id) {
+        setCurrentStatus(event.detail.status);
+        const updatedUser = storage.getCurrentUser();
+        if (updatedUser) {
+          setCurrentStatus(updatedUser.status as 'online' | 'afk' | 'offline');
+        }
+      }
     };
     
-    realtimeSync.subscribe('status_updated', handleStatusUpdate);
-    realtimeSync.subscribe('current_user_updated', handleStatusUpdate);
+    window.addEventListener('status-changed', handleStatusChange);
     
     return () => {
-      realtimeSync.unsubscribe('status_updated');
-      realtimeSync.unsubscribe('current_user_updated');
+      window.removeEventListener('status-changed', handleStatusChange);
     };
-  }, []);
+  }, [user]);
 
   const handleLogout = () => {
     logout();
@@ -106,12 +116,10 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
               <span>Статус:</span>
               {user && (
-                <StatusBadge 
-                  status={user.status as 'online' | 'afk' | 'offline'} 
+                <StatusSelector
                   userId={user.id}
-                  nickname={user.nickname}
-                  clickable={true}
-                  showIcon={true}
+                  currentStatus={currentStatus}
+                  onStatusChange={(newStatus) => setCurrentStatus(newStatus)}
                 />
               )}
             </div>

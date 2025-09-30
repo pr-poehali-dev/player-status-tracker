@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 import { storage } from '@/lib/storage';
 import { User, SystemAction } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { realtimeSync } from '@/lib/realtimeSync';
 import Icon from '@/components/ui/icon';
+import StatusSelector from '@/components/StatusSelector';
+import StatusTimeDisplay from '@/components/StatusTimeDisplay';
 
 const Players = () => {
   const [players, setPlayers] = useState<User[]>([]);
@@ -44,20 +45,16 @@ const Players = () => {
 
     loadPlayers();
     
-    realtimeSync.subscribe('users_updated', (updatedUsers: User[]) => {
-      if (Array.isArray(updatedUsers)) {
-        setPlayers(updatedUsers);
-        setFilteredPlayers(updatedUsers.filter(player => 
-          player.nickname.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          player.login.toLowerCase().includes(searchTerm.toLowerCase())
-        ));
-      }
-    });
+    const handleStatusChange = () => {
+      loadPlayers();
+    };
+    
+    window.addEventListener('status-changed', handleStatusChange);
     
     const interval = setInterval(loadPlayers, 30000);
     return () => {
       clearInterval(interval);
-      realtimeSync.unsubscribe('users_updated');
+      window.removeEventListener('status-changed', handleStatusChange);
     };
   }, []);
 
@@ -127,19 +124,9 @@ const Players = () => {
     storage.addAction(action);
   };
 
-  const handleStatusChange = async (playerId: string, newStatus: 'online' | 'afk' | 'offline') => {
-    try {
-      const success = await realtimeSync.updateUserStatus(playerId, newStatus);
-      if (success) {
-        const updatedPlayers = players.map(p => 
-          p.id === playerId ? { ...p, status: newStatus } : p
-        );
-        setPlayers(updatedPlayers);
-        storage.saveUsers(updatedPlayers);
-      }
-    } catch (error) {
-      console.error('Error updating status:', error);
-    }
+  const handleStatusChange = () => {
+    const updatedPlayers = storage.getUsers();
+    setPlayers(updatedPlayers);
   };
 
   const handleUpdatePlayer = () => {
@@ -305,35 +292,12 @@ const Players = () => {
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Статус:</span>
-                <Select
-                  value={player.status}
-                  onValueChange={(value: 'online' | 'afk' | 'offline') => handleStatusChange(player.id, value)}
+                <StatusSelector
+                  userId={player.id}
+                  currentStatus={player.status as 'online' | 'afk' | 'offline'}
                   disabled={!canManageUsers && currentUser?.id !== player.id}
-                >
-                  <SelectTrigger className="w-[140px] h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="online">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-green-500" />
-                        Онлайн
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="afk">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-yellow-500" />
-                        АФК
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="offline">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-gray-400" />
-                        Не в сети
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                  onStatusChange={handleStatusChange}
+                />
               </div>
 
               <div className="flex items-center justify-between">
@@ -351,6 +315,11 @@ const Players = () => {
                 <span className="text-xs text-gray-500">
                   {formatDate(player.lastActivity)}
                 </span>
+              </div>
+
+              <div className="pt-2 border-t">
+                <p className="text-xs text-gray-500 mb-2">Время в статусах:</p>
+                <StatusTimeDisplay user={player} compact={true} />
               </div>
 
               {canManageUsers && (
