@@ -83,6 +83,8 @@ const StatusSelector: React.FC<StatusSelectorProps> = ({
       const currentUser = storage.getCurrentUser();
       if (currentUser && currentUser.id === userId) {
         storage.setCurrentUser(updatedUser);
+        
+        localStorage.setItem('game_admin_current_user', JSON.stringify(updatedUser));
       }
 
       storage.addActivity({
@@ -94,13 +96,21 @@ const StatusSelector: React.FC<StatusSelectorProps> = ({
         duration: timeInPreviousStatus
       });
 
-      if (onStatusChange) {
-        onStatusChange(newStatus);
-      }
-
       window.dispatchEvent(new CustomEvent('status-changed', { 
         detail: { userId, status: newStatus, user: updatedUser } 
       }));
+      
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'game_admin_current_user',
+        newValue: JSON.stringify(updatedUser),
+        oldValue: currentUser ? JSON.stringify(currentUser) : null,
+        storageArea: localStorage,
+        url: window.location.href
+      }));
+
+      if (onStatusChange) {
+        onStatusChange(newStatus);
+      }
       
     } catch (error) {
       console.error('Error updating status:', error);

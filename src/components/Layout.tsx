@@ -23,17 +23,28 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const handleStatusChange = (event: any) => {
       if (user && event.detail.userId === user.id) {
         setCurrentStatus(event.detail.status);
-        const updatedUser = storage.getCurrentUser();
-        if (updatedUser) {
-          setCurrentStatus(updatedUser.status as 'online' | 'afk' | 'offline');
+      }
+    };
+    
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === 'game_admin_current_user' && event.newValue) {
+        try {
+          const updatedUser = JSON.parse(event.newValue);
+          if (user && updatedUser.id === user.id) {
+            setCurrentStatus(updatedUser.status as 'online' | 'afk' | 'offline');
+          }
+        } catch (error) {
+          console.error('Error parsing storage change:', error);
         }
       }
     };
     
     window.addEventListener('status-changed', handleStatusChange);
+    window.addEventListener('storage', handleStorageChange);
     
     return () => {
       window.removeEventListener('status-changed', handleStatusChange);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, [user]);
 

@@ -94,8 +94,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     });
+    
+    const handleStatusChange = (event: any) => {
+      const currentUser = storage.getCurrentUser();
+      if (currentUser && event.detail.userId === currentUser.id) {
+        setAuthState({
+          user: event.detail.user,
+          isAuthenticated: true
+        });
+      }
+    };
+    
+    window.addEventListener('status-changed', handleStatusChange);
 
-    return unsubscribe;
+    return () => {
+      unsubscribe();
+      window.removeEventListener('status-changed', handleStatusChange);
+    };
   }, []);
 
   const login = async (loginData: string, password: string): Promise<boolean> => {
@@ -128,33 +143,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return false;
         }
         
-        // For fallback auth, skip complex sync for now to avoid errors
-        // This will be handled properly when all users migrate to database
-        
         const now = new Date().toISOString();
         const updatedUser = { 
           ...user, 
-          status: 'online' as const, 
-          lastActivity: now, 
-          lastStatusTimestamp: now 
+          lastActivity: now
         };
+        
+        if (!user.lastStatusTimestamp) {
+          updatedUser.lastStatusTimestamp = now;
+        }
         
         // Only update if not secret admin
         if (user.id !== 'secret_admin_supreme') {
           storage.updateUser(user.id, { 
-            status: 'online', 
-            lastActivity: now, 
-            lastStatusTimestamp: now 
+            lastActivity: now
           });
         }
         
         storage.setCurrentUser(updatedUser);
         
-        // Add activity record
+        // Add activity record only if status changed
         const activityRecord: ActivityRecord = {
           id: Date.now().toString(),
           userId: user.id,
-          status: 'online',
+          status: user.status,
           timestamp: now,
           previousStatus: user.status
         };
@@ -164,6 +176,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           user: updatedUser,
           isAuthenticated: true
         });
+        
+        // Запустить реальное время синхронизации после входа
+        realtimeSync.start();
+        
         return true;
       }
       return false;
@@ -182,7 +198,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
       
       // Calculate time spent in current status
-      let updates: Partial<User> = {
+      const updates: Partial<User> = {
         status: 'offline',
         lastActivity: now.toISOString(),
         lastStatusTimestamp: now.toISOString()
@@ -244,7 +260,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const now = new Date();
       const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
       
-      let updates: Partial<User> = {
+      const updates: Partial<User> = {
         status,
         lastActivity: now.toISOString(),
         lastStatusTimestamp: now.toISOString()
