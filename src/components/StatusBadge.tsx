@@ -55,17 +55,17 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({
   const handleStatusChange = async (newStatus: 'online' | 'afk' | 'offline') => {
     if (!currentUser || newStatus === status || isUpdating) return;
     
-    // Проверить права доступа
     if (userId !== currentUser.id && currentUser.adminLevel < 6) {
-      return; // Нет прав менять статус других пользователей
+      return;
     }
 
     setIsUpdating(true);
     
     try {
-      const success = await realtimeSync.updateUserStatus(userId, newStatus);
-      if (!success) {
-        console.error('Failed to update status');
+      if (userId === currentUser.id) {
+        await realtimeSync.updateUserStatus(userId, newStatus);
+      } else {
+        await realtimeSync.updateUserStatus(userId, newStatus);
       }
     } catch (error) {
       console.error('Error updating status:', error);

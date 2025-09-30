@@ -1,15 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import StatusBadge from '@/components/StatusBadge';
 import Icon from '@/components/ui/icon';
+import { realtimeSync } from '@/lib/realtimeSync';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, logout, updateStatus } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [, setUpdateTrigger] = useState(0);
+
+  useEffect(() => {
+    const handleStatusUpdate = () => {
+      setUpdateTrigger(prev => prev + 1);
+    };
+    
+    realtimeSync.subscribe('status_updated', handleStatusUpdate);
+    realtimeSync.subscribe('current_user_updated', handleStatusUpdate);
+    
+    return () => {
+      realtimeSync.unsubscribe('status_updated');
+      realtimeSync.unsubscribe('current_user_updated');
+    };
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -86,9 +102,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </nav>
 
         <div className="absolute bottom-0 left-0 w-64 p-4 border-t border-gray-200 bg-white">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500">Статус:</span>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+              <span>Статус:</span>
               {user && (
                 <StatusBadge 
                   status={user.status as 'online' | 'afk' | 'offline'} 
@@ -100,16 +116,10 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               )}
             </div>
             
-            <div className="flex items-center space-x-3">
-              {user && (
-                <StatusBadge 
-                  status={user.status as 'online' | 'afk' | 'offline'} 
-                  userId={user.id}
-                  nickname={user.nickname}
-                  clickable={false}
-                  showIcon={true}
-                />
-              )}
+            <div className="flex items-center space-x-3 pt-2 border-t">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                {user?.nickname.slice(0, 2).toUpperCase()}
+              </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">{user?.nickname}</p>
                 <p className="text-xs text-gray-500">Уровень {user?.adminLevel}</p>
