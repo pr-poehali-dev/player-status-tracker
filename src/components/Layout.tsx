@@ -124,18 +124,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
         <div className="absolute bottom-0 left-0 w-64 p-4 border-t border-gray-200 bg-white">
           <div className="space-y-3">
-            <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-              <span>Статус:</span>
-              {user && (
-                <StatusSelector
-                  userId={user.id}
-                  currentStatus={currentStatus}
-                  onStatusChange={(newStatus) => setCurrentStatus(newStatus)}
-                />
-              )}
-            </div>
-            
-            <div className="flex items-center space-x-3 pt-2 border-t">
+            <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
                 {user?.nickname.slice(0, 2).toUpperCase()}
               </div>

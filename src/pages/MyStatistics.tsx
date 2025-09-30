@@ -6,10 +6,18 @@ import { ActivityRecord } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import Icon from '@/components/ui/icon';
 import NormProgress from '@/components/ui/norm-progress';
+import StatusSelector from '@/components/StatusSelector';
 
 const MyStatistics = () => {
   const [activities, setActivities] = useState<ActivityRecord[]>([]);
   const { user: currentUser } = useAuth();
+  const [currentStatus, setCurrentStatus] = useState<'online' | 'afk' | 'offline'>(currentUser?.status || 'offline');
+
+  useEffect(() => {
+    if (currentUser) {
+      setCurrentStatus(currentUser.status as 'online' | 'afk' | 'offline');
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -158,7 +166,11 @@ const MyStatistics = () => {
           <CardTitle className="flex items-center justify-between">
             <span>{currentUser.nickname}</span>
             <div className="flex items-center space-x-3">
-              {getStatusBadge(currentUser.status)}
+              <StatusSelector
+                userId={currentUser.id}
+                currentStatus={currentStatus}
+                onStatusChange={(newStatus) => setCurrentStatus(newStatus)}
+              />
               <Badge variant="outline">Уровень {currentUser.adminLevel}</Badge>
             </div>
           </CardTitle>
