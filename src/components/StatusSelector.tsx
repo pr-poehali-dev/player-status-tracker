@@ -15,13 +15,15 @@ interface StatusSelectorProps {
   currentStatus: 'online' | 'afk' | 'offline';
   disabled?: boolean;
   onStatusChange?: (newStatus: 'online' | 'afk' | 'offline') => void;
+  adminChange?: boolean;
 }
 
 const StatusSelector: React.FC<StatusSelectorProps> = ({ 
   userId, 
   currentStatus, 
   disabled = false,
-  onStatusChange 
+  onStatusChange,
+  adminChange = false
 }) => {
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -95,6 +97,21 @@ const StatusSelector: React.FC<StatusSelectorProps> = ({
         previousStatus: user.status,
         duration: timeInPreviousStatus
       });
+
+      // Логирование изменения статуса администратором
+      if (adminChange) {
+        const currentUser = storage.getCurrentUser();
+        if (currentUser && currentUser.id !== userId) {
+          storage.addAction({
+            id: Date.now().toString(),
+            adminId: currentUser.id,
+            action: 'Изменён статус участника',
+            target: user.nickname,
+            timestamp: now.toISOString(),
+            details: `С "${user.status}" на "${newStatus}"`
+          });
+        }
+      }
 
       window.dispatchEvent(new CustomEvent('status-changed', { 
         detail: { userId, status: newStatus, user: updatedUser } 

@@ -296,6 +296,7 @@ const Players = () => {
                   userId={player.id}
                   currentStatus={player.status as 'online' | 'afk' | 'offline'}
                   disabled={!canManageUsers && currentUser?.id !== player.id}
+                  adminChange={canManageUsers && currentUser?.id !== player.id}
                   onStatusChange={handleStatusChange}
                 />
               </div>
