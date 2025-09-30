@@ -27,7 +27,7 @@ const StatusSelector: React.FC<StatusSelectorProps> = ({
 }) => {
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const handleStatusChange = (newStatus: 'online' | 'afk' | 'offline') => {
+  const handleStatusChange = async (newStatus: 'online' | 'afk' | 'offline') => {
     if (newStatus === currentStatus || isUpdating) return;
     
     setIsUpdating(true);
@@ -36,7 +36,10 @@ const StatusSelector: React.FC<StatusSelectorProps> = ({
       const users = storage.getUsers();
       const userIndex = users.findIndex(u => u.id === userId);
       
-      if (userIndex === -1) return;
+      if (userIndex === -1) {
+        setIsUpdating(false);
+        return;
+      }
 
       const user = users[userIndex];
       const now = new Date();
@@ -124,6 +127,26 @@ const StatusSelector: React.FC<StatusSelectorProps> = ({
         storageArea: localStorage,
         url: window.location.href
       }));
+
+      // Синхронизировать изменение статуса с backend
+      try {
+        await fetch('https://functions.poehali.dev/b4a4302a-7216-4d43-aeec-46293c611171', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action: 'update_status',
+            user_id: userId,
+            status: newStatus,
+            previous_status: user.status,
+            time_in_previous_status: timeInPreviousStatus
+          })
+        });
+      } catch (syncError) {
+        console.warn('Failed to sync status with backend:', syncError);
+        // Не блокируем UI если backend недоступен
+      }
 
       if (onStatusChange) {
         onStatusChange(newStatus);

@@ -28,9 +28,20 @@ const MyStatistics = () => {
       setActivities(myActivities);
     };
 
+    const handleStatusChange = (event: any) => {
+      if (currentUser && event.detail.userId === currentUser.id) {
+        setCurrentStatus(event.detail.status);
+      }
+    };
+
+    window.addEventListener('status-changed', handleStatusChange);
     loadMyData();
     const interval = setInterval(loadMyData, 5000);
-    return () => clearInterval(interval);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('status-changed', handleStatusChange);
+    };
   }, [currentUser]);
 
   const formatTime = (milliseconds: number) => {
