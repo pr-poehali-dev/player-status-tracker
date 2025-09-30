@@ -29,19 +29,17 @@ const Players = () => {
   const { user: currentUser } = useAuth();
 
   useEffect(() => {
-    const loadPlayers = async () => {
+    const loadPlayers = () => {
       try {
-        const allPlayers = await storage.getUsersAsync();
+        const allPlayers = storage.getUsers();
         if (Array.isArray(allPlayers)) {
           setPlayers(allPlayers);
           setFilteredPlayers(allPlayers);
         }
       } catch (error) {
         console.error('Error loading players:', error);
-        // Fallback to sync version
-        const allPlayers = storage.getUsersSync();
-        setPlayers(allPlayers);
-        setFilteredPlayers(allPlayers);
+        setPlayers([]);
+        setFilteredPlayers([]);
       }
     };
 
@@ -58,7 +56,7 @@ const Players = () => {
       }
     });
     
-    const interval = setInterval(loadPlayers, 30000); // Уменьшил частоту обновления
+    const interval = setInterval(loadPlayers, 30000);
     return () => {
       clearInterval(interval);
       realtimeSync.unsubscribe('users_updated');
