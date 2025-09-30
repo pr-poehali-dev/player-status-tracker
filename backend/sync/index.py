@@ -136,30 +136,26 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                                 'body': json.dumps({'error': 'Пользователь не найден'})
                             }
                         
-                        # Обновить месячную статистику
-                        for month, time_value in activity_update.monthly_online_time.items():
-                            cur.execute("""
-                                INSERT INTO user_monthly_stats (user_id, month, online_time)
-                                VALUES (%s, %s, %s)
-                                ON CONFLICT (user_id, month)
-                                DO UPDATE SET online_time = %s
-                            """, (activity_update.user_id, month, time_value, time_value))
+                        # Обновить месячную статистику - собрать все месяцы
+                        all_months = set()
+                        all_months.update(activity_update.monthly_online_time.keys())
+                        all_months.update(activity_update.monthly_afk_time.keys())
+                        all_months.update(activity_update.monthly_offline_time.keys())
                         
-                        for month, time_value in activity_update.monthly_afk_time.items():
+                        for month in all_months:
+                            online_time = activity_update.monthly_online_time.get(month, 0)
+                            afk_time = activity_update.monthly_afk_time.get(month, 0)
+                            offline_time = activity_update.monthly_offline_time.get(month, 0)
+                            
                             cur.execute("""
-                                INSERT INTO user_monthly_stats (user_id, month, afk_time)
-                                VALUES (%s, %s, %s)
+                                INSERT INTO user_monthly_stats (user_id, month, online_time, afk_time, offline_time)
+                                VALUES (%s, %s, %s, %s, %s)
                                 ON CONFLICT (user_id, month)
-                                DO UPDATE SET afk_time = %s
-                            """, (activity_update.user_id, month, time_value, time_value))
-                        
-                        for month, time_value in activity_update.monthly_offline_time.items():
-                            cur.execute("""
-                                INSERT INTO user_monthly_stats (user_id, month, offline_time)
-                                VALUES (%s, %s, %s)
-                                ON CONFLICT (user_id, month)
-                                DO UPDATE SET offline_time = %s
-                            """, (activity_update.user_id, month, time_value, time_value))
+                                DO UPDATE SET 
+                                    online_time = EXCLUDED.online_time,
+                                    afk_time = EXCLUDED.afk_time,
+                                    offline_time = EXCLUDED.offline_time
+                            """, (activity_update.user_id, month, online_time, afk_time, offline_time))
                         
                         conn.commit()
                         

@@ -133,28 +133,89 @@ class RealtimeSync {
       const dbUsers = await storage.getUsersAsync();
       const localUsers = storage.getUsers();
 
+      // Мержить данные: использовать статус из БД, но сохранить локальные накопленные времена
+      const mergedUsers = dbUsers.map(dbUser => {
+        const localUser = localUsers.find(u => u.id === dbUser.id);
+        if (!localUser) return dbUser;
+
+        // Использовать накопленное время из localStorage (оно более актуально)
+        // Но статус, admin_level и другие системные поля - из БД
+        return {
+          ...dbUser,
+          totalOnlineTime: Math.max(localUser.totalOnlineTime || 0, dbUser.totalOnlineTime || 0),
+          totalAfkTime: Math.max(localUser.totalAfkTime || 0, dbUser.totalAfkTime || 0),
+          totalOfflineTime: Math.max(localUser.totalOfflineTime || 0, dbUser.totalOfflineTime || 0),
+          monthlyOnlineTime: localUser.monthlyOnlineTime || dbUser.monthlyOnlineTime || {},
+          monthlyAfkTime: localUser.monthlyAfkTime || dbUser.monthlyAfkTime || {},
+          monthlyOfflineTime: localUser.monthlyOfflineTime || dbUser.monthlyOfflineTime || {}
+        };
+      });
+
       // Проверить изменения
-      const hasChanges = this.compareUsers(dbUsers, localUsers);
+      const hasChanges = this.compareUsers(mergedUsers, localUsers);
       
       if (hasChanges) {
-        // Обновить локальные данные
-        storage.saveUsers(dbUsers);
+        // Обновить локальные данные мерженными данными
+        storage.saveUsers(mergedUsers);
         
         // Уведомить подписчиков
-        this.emit('users_updated', dbUsers);
+        this.emit('users_updated', mergedUsers);
         
         // Обновить текущего пользователя если нужно
         const currentUser = storage.getCurrentUser();
         if (currentUser) {
-          const updatedCurrentUser = dbUsers.find(u => u.id === currentUser.id);
+          const updatedCurrentUser = mergedUsers.find(u => u.id === currentUser.id);
           if (updatedCurrentUser && JSON.stringify(updatedCurrentUser) !== JSON.stringify(currentUser)) {
             storage.setCurrentUser(updatedCurrentUser);
             this.emit('current_user_updated', updatedCurrentUser);
           }
         }
       }
+
+      // Синхронизировать накопленное время с backend каждую минуту
+      await this.syncAccumulatedTime();
     } catch (error) {
       console.warn('Database sync failed, using localStorage only:', error);
+    }
+  }
+
+  private lastTimeSyncTimestamp = 0;
+  
+  private async syncAccumulatedTime() {
+    const now = Date.now();
+    // Синхронизировать только раз в минуту
+    if (now - this.lastTimeSyncTimestamp < 60000) return;
+    
+    this.lastTimeSyncTimestamp = now;
+    
+    try {
+      const users = storage.getUsers();
+      
+      // Отправить обновления времени в backend для каждого пользователя
+      for (const user of users) {
+        if (!user.totalOnlineTime && !user.totalAfkTime && !user.totalOfflineTime) continue;
+        
+        try {
+          await fetch('https://functions.poehali.dev/b4a4302a-7216-4d43-aeec-46293c611171', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'update_activity',
+              user_id: user.id,
+              total_online_time: user.totalOnlineTime || 0,
+              total_afk_time: user.totalAfkTime || 0,
+              total_offline_time: user.totalOfflineTime || 0,
+              monthly_online_time: user.monthlyOnlineTime || {},
+              monthly_afk_time: user.monthlyAfkTime || {},
+              monthly_offline_time: user.monthlyOfflineTime || {}
+            })
+          });
+        } catch (userSyncError) {
+          console.warn(`Failed to sync time for user ${user.id}:`, userSyncError);
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to sync accumulated time:', error);
     }
   }
 

@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { storage } from '@/lib/storage';
-import { SystemAction } from '@/types';
+import { dbStorage } from '@/lib/dbStorage';
 import Icon from '@/components/ui/icon';
 
 interface RegisterFormProps {
@@ -64,41 +64,28 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSwitchToLogin }) => {
     }
 
     try {
-      // Регистрируем пользователя через облачную синхронизацию
-      const result = await cloudSync.registerUser(
-        formData.login,
-        formData.password,
-        formData.email || undefined
-      );
+      // Регистрируем пользователя через базу данных
+      const newUser = await dbStorage.addUser({
+        login: formData.login,
+        password: formData.password,
+        nickname: formData.nickname
+      });
 
-      if (result.success && result.user) {
-        // Обновляем информацию о пользователе
-        const updatedUser = {
-          ...result.user,
-          firstName: formData.nickname,
-          username: formData.login,
-          role: 'user' as const,
-          adminLevel: 1,
-        };
-        
-        storage.updateUser(result.user.id, updatedUser);
+      // Добавляем пользователя в локальное хранилище
+      storage.addUser(newUser);
 
-        // Логируем действие
-        const action: SystemAction = {
-          id: 'action_' + Date.now(),
-          type: 'user_registered',
-          timestamp: Date.now(),
-          performedBy: result.user.id,
-          details: `Пользователь ${formData.nickname} (${formData.login}) зарегистрирован`,
-          severity: 'info'
-        };
-        storage.logSystemAction(action);
+      // Логируем действие
+      storage.addAction({
+        id: Date.now().toString(),
+        adminId: newUser.id,
+        action: 'Регистрация пользователя',
+        timestamp: new Date().toISOString(),
+        target: formData.nickname,
+        details: `Пользователь ${formData.nickname} (${formData.login}) зарегистрирован`
+      });
 
-        // Переходим к форме входа
-        onSwitchToLogin();
-      } else {
-        setError(result.error || 'Ошибка при регистрации');
-      }
+      // Переходим к форме входа
+      onSwitchToLogin();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка при регистрации');
     }

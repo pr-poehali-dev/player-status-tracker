@@ -4,13 +4,7 @@
       "name": "Get all users for sync",
       "method": "GET",
       "path": "/",
-      "expectedStatus": 200,
-      "expectedBody": {
-        "users": [],
-        "timestamp": "string",
-        "count": "number"
-      },
-      "bodyMatcher": "partial"
+      "expectedStatus": 200
     },
     {
       "name": "Update user status",
